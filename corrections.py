@@ -1,13 +1,13 @@
 import numpy as np
 from scipy import integrate
 import numpy.polynomial.polynomial as poly
-import basic_functions as bf
+import library as lb
 
 
 
 
 def optical_depth(redshift, lambda_obs, DLA = True):
-    """ Optical depth computed according to Inoue et al. 2013
+    """ Optical depth computed according to Inoue et al. 2014
     """
     coefficients = np.loadtxt('tables/lyman_series_coefficients.dat')
     tau1 = lyman_continuum_LAF(redshift, lambda_obs)
@@ -150,9 +150,9 @@ def shift_to_observed(spectrum, redshift, lambda_obs):
    continuum =[]
    lines =[]
    for wav in lambda_obs:
-       y = bf.interpolate(x, spectrum[:,1], wav, out_of_bounds =0, sort =False)
+       y = lb.interpolate(x, spectrum[:,1], wav, out_of_bounds =0, sort =False)
        continuum.append(y)
-       y = bf.interpolate(x, spectrum[:,2], wav, out_of_bounds =0, sort =False)
+       y = lb.interpolate(x, spectrum[:,2], wav, out_of_bounds =0, sort =False)
        lines.append(y)
    return continuum, lines
         
@@ -202,8 +202,8 @@ def host_correction(L, host_path ='tables/host_template.dat', control_negative =
                 host =10**host
                 agn = l6156[j]-host
             for i in range(0, N_bands):
-                A =  host/bf.interpolate(sed[:,0], sed[:,1], 6156, sort=False, out_of_bounds =0)
-                deltaL[j,i,1] = A*bf.interpolate(sed[:,0], sed[:,1], L[j,i,0], sort=False, out_of_bounds =0)
+                A =  host/lb.interpolate(sed[:,0], sed[:,1], 6156, sort=False, out_of_bounds =0)
+                deltaL[j,i,1] = A*lb.interpolate(sed[:,0], sed[:,1], L[j,i,0], sort=False, out_of_bounds =0)
                 if control_negative and deltaL[j,i,1] >= L[j,i,1]:
                     deltaL[j,i,1] =np.nan
                 
@@ -212,8 +212,8 @@ def host_correction(L, host_path ='tables/host_template.dat', control_negative =
             ratio = 0.8052 -1.5502*x+0.9121*x*x-0.1577*(x**3)    #Shen et al. 2011
             host = (ratio*l5100[j])/(1+ratio)
             for i in range(0, N_bands):
-                A =  host/bf.interpolate(sed[:,0], sed[:,1], 5100, sort=False, out_of_bounds =0)
-                deltaL[j,i,1] = A*bf.interpolate(sed[:,0], sed[:,1], L[j,i,0], sort=False, out_of_bounds =0)
+                A =  host/lb.interpolate(sed[:,0], sed[:,1], 5100, sort=False, out_of_bounds =0)
+                deltaL[j,i,1] = A*lb.interpolate(sed[:,0], sed[:,1], L[j,i,0], sort=False, out_of_bounds =0)
                 if control_negative and deltaL[j,i,1] >= L[j,i,1]:
                     deltaL[j,i,1] =np.nan
                     
