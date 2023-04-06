@@ -166,9 +166,9 @@ def gap_filling(magnitudes, redshift,coefficients, SED_path = 'tables/gap_fillin
           for i in range(N_bands):
                if not magnitudes[j,i,1]==magnitudes[j,i,1]:       #looking for nan values
                   nearest =find_nearest_filter(M,i)
-                  Fnu = bf.interpolate(sed[:,0], sed[:,1], magnitudes[j,nearest,0]/(redshift[j]+1), sort=False, out_of_bounds =np.nan)*magnitudes[j,nearest,0]/2.998e18
+                  Fnu = lb.interpolate(sed[:,0], sed[:,1], magnitudes[j,nearest,0]/(redshift[j]+1), sort=False, out_of_bounds =np.nan)*magnitudes[j,nearest,0]/2.998e18
                   A = 10**((-(magnitudes[j,nearest,1]+48.6)/2.5)-np.log10(Fnu))
-                  Fnu_gap= A*bf.interpolate(sed[:,0], sed[:,1], magnitudes[j,i,0]/(redshift[j]+1), sort=False, out_of_bounds =np.nan)*magnitudes[j,i,0]/2.998e18
+                  Fnu_gap= A*lb.interpolate(sed[:,0], sed[:,1], magnitudes[j,i,0]/(redshift[j]+1), sort=False, out_of_bounds =np.nan)*magnitudes[j,i,0]/2.998e18
                   magnitudes[j,i,1]  = -2.5*np.log10(Fnu_gap) -48.6
                   magnitudes[j,i,2] = np.polyval(coefficients[i],magnitudes[j,i,1])
 
@@ -189,8 +189,8 @@ def find_nearest_filter(lum, filter_idx):
     
     
 def host_correction(L, host_path ='tables/host_template.dat', control_negative = True, Niter=3):
-    l5100 = bf.monochromatic_lum(L, 5100, out_of_bounds =0)
-    l6156 = bf.monochromatic_lum(L, 6156, out_of_bounds =0)
+    l5100 = lb.monochromatic_lum(L, 5100, out_of_bounds =0)
+    l6156 = lb.monochromatic_lum(L, 6156, out_of_bounds =0)
     sed= np.loadtxt(host_path, skiprows = 0)
     deltaL = np.zeros(np.shape(L))
     N_bands =np.shape(L)[1]
