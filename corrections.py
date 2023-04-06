@@ -6,10 +6,10 @@ import library as lb
 
 
 
-def optical_depth(redshift, lambda_obs, DLA = True):
+def optical_depth(redshift, lambda_obs, DLA = True, coefficients_path='tables/lyman_series_coefficients.dat'):
     """ Optical depth computed according to Inoue et al. 2014
     """
-    coefficients = np.loadtxt('tables/lyman_series_coefficients.dat')
+    coefficients = np.loadtxt(coefficient_path)
     tau1 = lyman_continuum_LAF(redshift, lambda_obs)
     tau2 = lyman_series_LAF(redshift, lambda_obs, coefficients)
     tau1 = np.array(tau1)
