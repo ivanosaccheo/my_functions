@@ -479,7 +479,15 @@ def monochromatic_lum(data, wavelength, uncertainties = False, out_of_bounds = n
 
 
 
-
+def merge_bands(df, column_name):
+    if isinstance(column_name, str):
+        new_column = df[column_name].to_numpy()
+    else:
+        new_column = df[column_name[0]].to_numpy()
+        for col in column_name[1:]:
+            where_nan = np.isnan(new_column)
+            new_column[where_nan] = df[col][where_nan].to_numpy()
+    return new_column
 
 
 
