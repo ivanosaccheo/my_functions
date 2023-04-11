@@ -67,7 +67,7 @@ def compute_xray_luminosity(l2500, energy=2, photon_index=1.7):
     return lx
 
 
-def get_sed(which_sed='WISSH', which_type='All', normalization=False, log_log=False, add_path=False, path= 'Tavole_utili/'):
+def get_sed(which_sed='krawczyk', which_type='All', normalization=False, log_log=False, add_path=False, path= '~/DATA/Tables/'):
     if 'krawczyk' in which_sed.lower():
         path = path+'krawczyk_13_all.csv'
         if add_path:
@@ -235,9 +235,7 @@ def get_filter(filter_name, exact_name=False):
  
     return filtro
 
-
-
-def three_2_two(data, other_data=[], names =False ):
+def three_2_two(data, *args, band_names = None, all_names = None ):
     """
     It transforms a 3-Dimesional array into a 2D table, where each row has data from 1 source.
     Table's columns give luminosities at the different bands + possibly other physical information (e.g. redshift)
@@ -246,53 +244,65 @@ def three_2_two(data, other_data=[], names =False ):
     ----------
     data : Numpy 3D array.
            Numpy 3D array with magnitudes or luminosity
-    other_data : List or tuple of arrays.
-                 List (or tuple) with other infromation to append to the table.
-                 E.g. other_data = [redshift, EBV, Lbol] where each feature is a 
+    *args : other_data i.e. redshift, EBV, Lbol to include  where each feature is a 
                  NQSO x 1 array. 
        
-    names : List of strings, OPTIONAL
+    band_names : List of strings, OPTIONAL
             list of strings, containig the names of the bands ( e.g. u, g, K, W1) 
             and the names of the other features (e.g. redshift, EBV). 
             If passed, a Pandas Data Frame with columns names is returned
+    
+    all_names : List of strings, OPTIONAL
+            list of strings, containig the all the names (including err_ or lambda_)
+            if all_names and band_names are provided, all_names is used
             
 
-    Returns : 2D array or Pandas Data Frame
+    Returns : Pandas Data Frame
    
 
     """
     Nqso = data.shape[0]
     Nbands = data.shape[1]
     Ndata = data.shape[2]
-    NewData = np.zeros((Nqso, Nbands*Ndata+len(other_data)))
+    
+    NewData = np.zeros((Nqso, Nbands*Ndata+len(args)))
+    
     for i in range(Nbands):
         for k in range(Ndata):
             NewData[:, i*Ndata+k] =data[:,i,k]
+    if args: 
+        for i, feature in enumerate(args):
+            NewData[:, Ndata*Nbands+i] = feature
     
-    for i, feature in enumerate(other_data):
-        NewData[:, Ndata*Nbands+i] = feature
-        
-    if names and Ndata ==3:
+    name_array = None
+    if all_names:
+        name_array = all_names
+    
+    
+    elif band_names and Ndata ==3:
        name_array =[]
-       for i,name in enumerate(names):
+       for i,name in enumerate(band_names):
            if i <  Nbands:
                name_array.append('lambda_'+name)
                name_array.append(name)
                name_array.append('err_'+name)
            else:
                name_array.append(name)
-       NewData = pd.DataFrame(NewData, columns = name_array)  
-    elif names and Ndata ==2:
+
+    elif band_names and Ndata ==2:
        name_array =[]
-       for i,name in enumerate(names):
+       for i,name in enumerate(band_names):
            if i <  Nbands:
                name_array.append(name)
                name_array.append('err_'+name)
            else:
                name_array.append(name)
         
-       NewData = pd.DataFrame(NewData, columns = name_array)  
-    return NewData
+    return pd.DataFrame(NewData, columns = name_array)  
+    
+    
+
+
 
 
 def two_2_three(data, extra_features = False, has_wavelength=True):
@@ -478,7 +488,6 @@ def monochromatic_lum(data, wavelength, uncertainties = False, out_of_bounds = n
     return lum    
 
 
-
 def merge_bands(df, column_name):
     if isinstance(column_name, str):
         new_column = df[column_name].to_numpy()
@@ -489,6 +498,67 @@ def merge_bands(df, column_name):
             new_column[where_nan] = df[col][where_nan].to_numpy()
     return new_column
 
+def get_magnitudes(luminosity, redshift, return_wavelengths = True, H0 =70, Om0 = 0.3):
+    magnitudes = np.zeros(luminosity.shape)
+    
+    #if len(magnitudes.shape) == 2:
+        
+        #for i in range(magnitudes.shape[0]):
+            #luminosity[i, 1] = 10**(-0.4*(magnitudes[i,1] +48.6))*(2.998e18/magnitudes[i,0]) #magntitudes to fluxes
+            #luminosity[i, 2] = luminosity[i,1] * magnitudes[i, 2]*0.4*np.log(10)   #error on fluxes
+            #luminosity[i, 0] = magnitudes[i,0]/(redshift+1)       #rest frame wavelengths
+        #if not Return_Fluxes:
+            #dl = FlatLambdaCDM(H0=H0, Om0=Om0).luminosity_distance(redshift).to(units.cm).value 
+            #for i in range(magnitudes.shape[0]):
+                #luminosity[i, 1] = luminosity[i, 1]*dl*dl*4*np.pi 
+                #luminosity[i, 2] = luminosity[i, 2]*dl*dl*4*np.pi
+     
+    if len(magnitudes.shape) == 3:    
+        dl = FlatLambdaCDM(H0=H0, Om0=Om0).luminosity_distance(redshift).cgs.value 
+        for i in range(magnitudes.shape[1]):
+            magnitudes[:, i, 0] = luminosity[:, i, 0]*(redshift+1)
+            magnitudes[:, i, 1] = luminosity[:, i, 1]/(dl*dl*4*np.pi)
+            magnitudes[:, i, 2] = luminosity[:, i, 2]/(dl*dl*4*np.pi)
+            
+            magnitudes[:, i, 1] = magnitudes[:, i, 1]*magnitudes[:, i, 0]/2.998e18  #Fnu
+            magnitudes[:, i, 2] = magnitudes[:, i, 2]*magnitudes[:, i, 0]/2.998e18    
+            
+            magnitudes[:, i, 2] = 2.5*(magnitudes[:, i, 2]/magnitudes[:, i, 1])/np.log(10)
+            magnitudes[:, i, 1] = -2.5*np.log10( magnitudes[:, i, 1]) -48.6
+     
+    if return_wavelengths:
+        return magnitudes
+    else:
+        return magnitudes[:,:, 1:]
+
+
+def compute_mean_in_bins(x, y, bins, function = 'mean'):
+#Raggruppa i dati in bin di x e per quei bin calcola media e varianza in y
+
+    digitized= np.digitize(x, bins)
+    if function == 'mean':
+        x_mean = np.asarray([np.nanmean(x[digitized == i]) for i in range(1, len(bins))])
+        x_var =  np.asarray([np.nanvar(x[digitized == i]) for i in range(1, len(bins))])
+        y_mean = np.asarray([np.nanmean(y[digitized == i]) for i in range(1, len(bins))])
+        y_var = np.asarray([np.nanvar(y[digitized == i]) for i in range(1, len(bins))])
+    elif function == 'median':
+        x_mean = np.asarray([np.nanmedian(x[digitized == i]) for i in range(1, len(bins))])
+        x_var =  np.asarray([np.nanvar(x[digitized == i]) for i in range(1, len(bins))])
+        y_mean = np.asarray([np.nanmedian(y[digitized == i]) for i in range(1, len(bins))])
+        y_var = np.asarray([np.nanvar(y[digitized == i]) for i in range(1, len(bins))])
+        print('Sto ancora calcolando la varianza, non la MAD')
+    else:
+        print('Function deve essere mean or median')
+        return None
+
+
+    N = np.asarray([np.sum(digitized == i) for i in range(1, len(bins))])
+    return np.stack([x_mean, y_mean, x_var, y_var, N], axis =1)
+
+
+
+def get_host(host_path ='~/DATA/Tables/galaxy_template.dat'):
+    return pd.read_csv(host_path, header = None, sep =' ')
 
 
 
