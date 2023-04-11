@@ -1,12 +1,15 @@
 import numpy as np
 from scipy import integrate
 import numpy.polynomial.polynomial as poly
-import library as lb
+from  my_functions import library as lb
+import pandas as pd
+from scipy.interpolate import interp1d
 
 
 
 
-def optical_depth(redshift, lambda_obs, DLA = True, coefficients_path='tables/lyman_series_coefficients.dat'):
+def optical_depth(redshift, lambda_obs, DLA = True, 
+                coefficients_path='~/DATA/tables/lyman_series_coefficients.dat'):
     """ Optical depth computed according to Inoue et al. 2014
     """
     coefficients = np.loadtxt(coefficient_path)
@@ -117,7 +120,7 @@ def lyman_continuum_DLA(redshift, lambda_obs):
            tau.append(y)
     return tau
     
-def correct_magnitudes(redshift, filter_path, emission_lines = True, IGM = True, DLA = True, spectrum_path = 'tables/vanden_berk_13.dat'):
+def correct_magnitudes(redshift, filter_path, emission_lines = True, IGM = True, DLA = True, spectrum_path = '~/DATA/tables/vanden_berk_13.dat'):
     '''
     It returns an array with the magnitude corrections.
     It requires an array with sources redshift and an array with the path to the filter tranmission(s) file.
@@ -157,7 +160,7 @@ def shift_to_observed(spectrum, redshift, lambda_obs):
    return continuum, lines
         
         
-def gap_filling(magnitudes, redshift,coefficients, SED_path = 'tables/gap_filling_sed.dat'):
+def gap_filling(magnitudes, redshift,coefficients, SED_path = '~/DATA/tables/gap_filling_sed.dat'):
     sed = np.loadtxt(SED_path, skiprows = 0) #lambda, L_lambda
     N_bands = np.shape(magnitudes)[1]
     N_qso = np.shape(magnitudes)[0]
@@ -186,39 +189,89 @@ def find_nearest_filter(lum, filter_idx):
            nearest = idx
            break
     return nearest
-    
-    
-def host_correction(L, host_path ='tables/host_template.dat', control_negative = True, Niter=3):
-    l5100 = lb.monochromatic_lum(L, 5100, out_of_bounds =0)
-    l6156 = lb.monochromatic_lum(L, 6156, out_of_bounds =0)
-    sed= np.loadtxt(host_path, skiprows = 0)
+
+def host_correction_old(L, host_path ='~/DATA/Tables/galaxy_template.dat', control_negative = True, Niter=3):
+    l5100 = lb.monochromatic_lum(L, 5100, out_of_bounds = 'extrapolate')
+    l6156 = lb.monochromatic_lum(L, 6156, out_of_bounds = 'extrapolate')
+    sed= pd.read_csv(host_path, header = None, sep =' ').to_numpy()
+    sed_5100 = sed[:,1] / lb.interpolate(sed[:,0], sed[:,1], 5100, sort=False, out_of_bounds = 0)
+    sed_6156 = sed[:,1] / lb.interpolate(sed[:,0], sed[:,1], 6156, sort=False, out_of_bounds = 0)
     deltaL = np.zeros(np.shape(L))
     N_bands =np.shape(L)[1]
     for j in range(0,np.shape(L)[0]):
-       if l5100[j] <10**44.75:
+    ##Richards+06 log(Lhost) = 0.87log(L_agn) + 2.887 L in erg/s Hz^-1
+    # 4.7694 is to scale to nuFnu i.e. (1-0.87)*log(2.998e18/lambda) + 2.887
+        if 0 < l5100[j] <10**44.75:
             agn =  l6156[j]
             for i in range(Niter):
                 host=0.87*np.log10(agn)+4.7964          #vanden berk 2006 /richards 2006
                 host =10**host
                 agn = l6156[j]-host
-            for i in range(0, N_bands):
-                A =  host/lb.interpolate(sed[:,0], sed[:,1], 6156, sort=False, out_of_bounds =0)
-                deltaL[j,i,1] = A*lb.interpolate(sed[:,0], sed[:,1], L[j,i,0], sort=False, out_of_bounds =0)
-                if control_negative and deltaL[j,i,1] >= L[j,i,1]:
-                    deltaL[j,i,1] =np.nan
+            deltaL[j,:,1] = host*np.interp(L[j,:,0], sed[:,0], sed_6156, left=0, right=0)
+
                 
-       elif l5100[j]< 10**45.053:
+        elif l5100[j]< 10**45.053:
             x = np.log10(l5100[j])-44
             ratio = 0.8052 -1.5502*x+0.9121*x*x-0.1577*(x**3)    #Shen et al. 2011
             host = (ratio*l5100[j])/(1+ratio)
-            for i in range(0, N_bands):
-                A =  host/lb.interpolate(sed[:,0], sed[:,1], 5100, sort=False, out_of_bounds =0)
-                deltaL[j,i,1] = A*lb.interpolate(sed[:,0], sed[:,1], L[j,i,0], sort=False, out_of_bounds =0)
-                if control_negative and deltaL[j,i,1] >= L[j,i,1]:
-                    deltaL[j,i,1] =np.nan
-                    
+            deltaL[j,:,1] = host*np.interp(L[j,:,0], sed[:,0], sed_5100, left=0, right=0)
+        
+    if control_negative:
+        overestimated = deltaL[:,:,1] >= L[:,:,1]
+        deltaL[np.any(overestimated, axis = 1), :, 1] = 0
+        return deltaL, np.where(np.any(overestimated, axis = 1))[0]
 
     return deltaL
+
+
+def host_correction(L, host_path ='~/DATA/Tables/galaxy_template.dat', control_negative = True, Niter=3):
+    
+    L5100 = lb.monochromatic_lum(L, 5100, out_of_bounds = 'extrapolate')
+    L6156 = lb.monochromatic_lum(L, 6156, out_of_bounds = 'extrapolate')
+    sed= pd.read_csv(host_path, header = None, sep =' ').to_numpy()
+    
+    sed[:,1] = sed[:,1]/np.interp(5100, sed[:,0], sed[:,1]) #sed normalized at 5100A°  
+    host_f = interp1d(sed[:,0], sed[:,1], bounds_error=False ,fill_value=0)
+    scale = 1/host_f(6156),
+    deltaL = np.zeros(np.shape(L))
+    
+    host = get_host_luminosity(L5100, L6156, scale, Niter = Niter)
+    
+    for j in range(np.shape(L)[0]):
+        
+        deltaL[j,:,1] = host[j]*host_f(L[j,:,0])
+        
+    if control_negative:
+        overestimated = deltaL[:,:,1] >= L[:,:,1]
+        deltaL[np.any(overestimated, axis = 1), :, 1] = 0
+        return deltaL, np.where(np.any(overestimated, axis = 1))[0]
+
+    return deltaL
+
+
+def get_host_luminosity(L5100, L6156, scale, Niter = 3):
+    """Returns the Host luminosity at 5100 A.
+       Scale = L5100/L6156
+    """
+    assert(len(L5100) == len(L6156))
+    host_5100 = np.zeros((len(L5100,)))
+    for j, (l5100, l6156) in enumerate(zip(L5100, L6156)):
+    ##Richards+06 log(Lhost) = 0.87log(L_agn) + 2.887 L in erg/s Hz^-1
+    # 4.7694 is to scale to nuFnu i.e. (1-0.87)*log(2.998e18/lambda) + 2.887
+        if 0 < l5100 <10**44.75:
+            agn =  l6156
+            for i in range(Niter):
+                host=0.87*np.log10(agn)+4.7964          #vanden berk 2006 /richards 2006
+                host =10**host
+                agn = l6156-host
+            host_5100[j] = scale*host       # from 6156 to 5100
+
+        elif l5100< 10**45.053:
+            x = np.log10(l5100)-44
+            ratio = 0.8052 -1.5502*x+0.9121*x*x-0.1577*(x**3)    #Shen et al. 2011
+            host_5100[j] = (ratio*l5100)/(1+ratio)
+    return host_5100  
+  
     
     
 def process_errors(magnitudes, minimum_error = 0.0, get_fit= True, deg = 3, shift_errors=False, missing_data_error =0.1):
@@ -241,6 +294,14 @@ def process_errors(magnitudes, minimum_error = 0.0, get_fit= True, deg = 3, shif
            coefficients.append(coeff)
     return magnitudes, coefficients
          
+
+
+
+
+
+
+
+
 
 
 
