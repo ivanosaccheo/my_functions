@@ -461,7 +461,7 @@ def get_sed(which_sed='krawczyk', which_type='All', normalization=False, log_log
 
 def get_host(path ='tables/sed_templates/host_galaxy_sed.csv'):
      
-    return pd.read_csv(path, header = 0, sep = ',' )
+    return pd.read_csv(path, header = 0, sep = ',' ).to_numpy()
 
 
 def find_normalization(wavelengths, L, err_L, sed, lambda_min=1216, lambda_max=50000):
