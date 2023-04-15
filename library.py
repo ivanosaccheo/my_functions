@@ -395,7 +395,7 @@ class filtro():
 def get_sed(which_sed='krawczyk', which_type='All', normalization=False, log_log=False, path= 'tables/sed_templates'):
     
     if 'krawczyk' in which_sed.lower():
-        SED = pd.read_csv(os.path.join(path,'krawczyk_13_all.csv') , sep=',', header=0)
+        SED = pd.read_csv(os.path.join(path,'krawczyk_sed.csv') , sep=',', header=0)
         x = SED['lambda'].to_numpy()
         if 'all' in which_type.lower():
             y = SED['All'].to_numpy()
