@@ -35,6 +35,15 @@ import datetime
 import pytz
 
 
+
+PATH_TO_DATA =  ""
+
+
+
+
+
+
+
 def interpolate(x, y, x0, out_of_bounds='error', sort=True, log_log=True):
     """
     It returns the value of y computed at x0 linearly interpolating between 
@@ -44,7 +53,7 @@ def interpolate(x, y, x0, out_of_bounds='error', sort=True, log_log=True):
     x0 : float
     out_of_bounds : Number, np.nan, 'extrapolate', 'error'. It determines the behaviour of the interpolation when x0 is out of bounds
 
-    sort: logical, if true the templates are sorted befor computation
+    sort: logical, if true the templates are sorted before computation
 
     log_log : logical, if true it interpolates in the log-log space
 
@@ -334,7 +343,7 @@ def monochromatic_lum(data, wavelength, uncertainties = False, out_of_bounds = n
     
     N = np.shape(data)[0]   #Number of QSOs
     if not uncertainties:
-       lum = np.zeros((N,1))
+       lum = np.zeros((N,))
        for i in range(0,N):
            lum[i]= interpolate(data[i,:,0],data[i,:,1], wavelength, out_of_bounds=out_of_bounds)
     else:
@@ -359,7 +368,7 @@ def merge_bands(df, column_name):
 
 class filtro():
     def __init__(self, filter_name, path = 'tables/filters'):
-        self.path = path
+        self.path = os.path.join(PATH_TO_DATA,path)
         self.get_filter_name(filter_name)
         if hasattr(self, 'name'):
             self.wav = self.get_effective_wavelength()
@@ -393,7 +402,9 @@ class filtro():
  ########### AGN /SED
 
 def get_sed(which_sed='krawczyk', which_type='All', normalization=False, log_log=False, path= 'tables/sed_templates'):
-    
+   
+    path = os.path.join(PATH_TO_DATA ,path)
+   
     if 'krawczyk' in which_sed.lower():
         SED = pd.read_csv(os.path.join(path,'krawczyk_sed.csv') , sep=',', header=0)
         x = SED['lambda'].to_numpy()
@@ -460,8 +471,9 @@ def get_sed(which_sed='krawczyk', which_type='All', normalization=False, log_log
 
 
 def get_host(path ='tables/sed_templates/host_galaxy_sed.csv'):
-     
-    return pd.read_csv(path, header = 0, sep = ',' ).to_numpy()
+     path = os.path.join(PATH_TO_DATA ,path)
+   
+     return pd.read_csv(path, header = 0, sep = ',' ).to_numpy()
 
 
 def find_normalization(wavelengths, L, err_L, sed, lambda_min=1216, lambda_max=50000):
@@ -591,6 +603,27 @@ def lusso_recipe(lambda_start, L_start, L_1kev, Npoints = 30):
    
     
    
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   
 
 
