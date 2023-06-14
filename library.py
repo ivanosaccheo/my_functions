@@ -390,7 +390,7 @@ class filtro():
       
     def get_effective_wavelength(self):
         table = pd.read_csv(os.path.join(self.path, "filter_list.txt"), delim_whitespace = True)
-        eff_wav = float(table[table['Name'] == self.name[:-4]]['eff_wavelength'])
+        eff_wav = float(table[table['Name'] == self.name[:-4]]['eff_wavelength'].iloc[0])
         return eff_wav
         
     def get_transmission(self):
