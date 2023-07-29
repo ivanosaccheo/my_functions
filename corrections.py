@@ -125,7 +125,7 @@ def get_IGM_absorption(redshift, lambda_obs, coefficients = get_lyman_coefficien
         return  tau_continuum_laf +  tau_continuum_dla + tau_series_laf + tau_series_dla
 
 
-def get_lyman_coefficients(coefficients_path= "tables/lyman_series_coefficients.dat")
+def get_lyman_coefficients(coefficients_path= "tables/various/lyman_series_coefficients.dat")
     return np.loadtxt(coefficient_path)
 
     
