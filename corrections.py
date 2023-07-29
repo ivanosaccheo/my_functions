@@ -145,8 +145,8 @@ def correct_magnitudes(redshift, filter_path, emission_lines = True, IGM = True,
         continuum, lines = shift_to_observed(spectrum_rest, z, lambda_obs)
         den = integrate.trapezoid(continuum*lambda_obs*transmission, lambda_obs)
         if IGM:
-           tau = np.array(optical_depth(z, lambda_obs, DLA=DLA))
-           y =1/np.exp(tau.astype(float))
+           tau = get_IGM_absorption(z, lambda_obs, DLA=DLA)
+           y = np.exp(-tau)
            num = integrate.trapezoid(y*continuum*lambda_obs*transmission, lambda_obs)
            delta_m_IGM = -2.5*np.log10(num/den)
         if emission_lines:
@@ -159,13 +159,9 @@ def correct_magnitudes(redshift, filter_path, emission_lines = True, IGM = True,
     
 def shift_to_observed(spectrum, redshift, lambda_obs):
    x = spectrum[:,0]*(redshift +1)
-   continuum =[]
-   lines =[]
-   for wav in lambda_obs:
-       y = lb.interpolate(x, spectrum[:,1], wav, out_of_bounds =0, sort =False)
-       continuum.append(y)
-       y = lb.interpolate(x, spectrum[:,2], wav, out_of_bounds =0, sort =False)
-       lines.append(y)
+   continuum = np.interp(lambda_obs, x, spectrum[:,1])
+   lines = np.interp(lambda_obs, x, spectrum[:,2])
+
    return continuum, lines
         
         
