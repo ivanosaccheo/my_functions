@@ -366,26 +366,33 @@ def merge_bands(df, column_name):
             new_column[where_nan] = df[col][where_nan].to_numpy()
     return new_column
 
+
 class filtro():
+    
     def __init__(self, filter_name, path = 'tables/filters'):
         self.path = os.path.join(PATH_TO_DATA,path)
         self.get_filter_name(filter_name)
         if hasattr(self, 'name'):
             self.wav = self.get_effective_wavelength()
+        
+        return None 
 
         
     def get_filter_name(self, filter_name):
         names = [i for i in os.listdir(self.path) if i.endswith('.dat')]
         matching_names = [i for i in names if filter_name.casefold() in i.casefold()]
+        
         if len(matching_names) == 1:
             self.name = matching_names[0]
             return None
         elif len(matching_names) > 1:
             matching_names.sort()
+            print(f"Multiple filters with {filter_name} name:")
             for name in matching_names: print(name)
             return None
+        
         elif len(matching_names) == 0:
-            print('No filter with that name')   
+            print(f"No filter with {filter_name} name")   
             return None
       
     def get_effective_wavelength(self):
@@ -397,8 +404,19 @@ class filtro():
         self.transmission = np.loadtxt(os.path.join(self.path, self.name))
         self.wav_min = np.min(self.transmission[self.transmission[:,1]>0,0])
         self.wav_max = np.max(self.transmission[self.transmission[:,1]>0,0])
-
-
+    
+    def convolve(self, wavelengths, flux, magnitudes = True,
+              left = np.nan, right = np.nan):
+        """flux in erg/s cm^-2, magnitudes = True return -2.5*log10(flux)"""
+        flux = np.interp(self.transmission[:,0], wavelengths, flux, 
+                          left = left, right = right)
+        num = np.trapz(flux*self.transmission[:,1], self.transmission[:,0])/2.998e18
+        den = np.trapz(self.transmission[:,1]/self.transmission[:,0], self.transmission[:,0])
+        if magnitudes:
+            return -2.5 * np.log10(num/den)
+        else:
+            return num/den
+            
  ########### AGN /SED
 
 def get_sed(which_sed='krawczyk', which_type='All', normalization=False, log_log=False, path= 'tables/sed_templates'):
