@@ -6,124 +6,133 @@ import pandas as pd
 from scipy.interpolate import interp1d
 
 
-
-
-def optical_depth(redshift, lambda_obs, DLA = True, 
-                coefficients_path='~/DATA/tables/lyman_series_coefficients.dat'):
-    """ Optical depth computed according to Inoue et al. 2014
-    """
-    coefficients = np.loadtxt(coefficient_path)
-    tau1 = lyman_continuum_LAF(redshift, lambda_obs)
-    tau2 = lyman_series_LAF(redshift, lambda_obs, coefficients)
-    tau1 = np.array(tau1)
-    tau2 = np.array(tau2)
-    tau = tau1+tau2
-    if DLA:
-       tau3 = lyman_continuum_DLA(redshift, lambda_obs)
-       tau4 = lyman_series_DLA(redshift, lambda_obs, coefficients)
-       tau3 = np.array(tau3)
-       tau4 = np.array(tau4)
-       tau = tau+tau3+tau4
-    return tau
-
-
-def lyman_series_LAF(redshift, lambda_obs, coefficients):
-    tau =[]
-    for wav in lambda_obs:
-        x=[]
-        for j in range(0, np.size(coefficients,0)):
-            if wav >coefficients[j,1] and wav <coefficients[j,1]*(redshift+1):
-               if  wav <coefficients[j,1]*2.2:
-                    x.append(coefficients[j,2]*((wav/coefficients[j,1])**1.2))
-               
-               elif wav >=coefficients[j,1]*2.2 and wav <coefficients[j,1]*5.7:
-                    x.append(coefficients[j,3]*((wav/coefficients[j,1])**3.7))
-               
-               else:
-                    x.append(coefficients[j,4]*((wav/coefficients[j,1])**5.5))
-               
-        tau.append(np.sum(x))            
-    return tau
-
-def lyman_series_DLA(redshift, lambda_obs, coefficients):
-    tau =[]
-    for wav in lambda_obs:
-        x=[]
-        for j in range(0, np.size(coefficients, 0)):
-            if wav >coefficients[j,1] and wav < coefficients[j,1]*(redshift+1):
-               if  wav <coefficients[j,1]*3:
-                   x.append(coefficients[j,5]*((wav/coefficients[j,1])**2))
-               
-               else:
-                    x.append(coefficients[j,6]*((wav/coefficients[j,1])**3))
-              
-        tau.append(np.sum(x))            
-    return tau
-
-
 def lyman_continuum_LAF(redshift, lambda_obs):
-    tau =[]
+    
     ll = 911.8                   #lyman-limit
     wav = lambda_obs/ll
+    tau = np.zeros((len(lambda_obs),))
+    
     if redshift < 1.2:
-       for x in wav:
-           if x<(redshift+1):
-              y = 0.325*(x**1.2-((1+redshift)**(-0.9))*(x**2.1))
-           else:
-              y=0
-           tau.append(y)
+        idx = wav<(redshift+1)
+        tau[idx] = 0.325*(wav[idx]**1.2-((1+redshift)**(-0.9))*(wav[idx]**2.1))
     
     elif redshift >= 1.2 and redshift < 4.7:
-       for x in wav:
-           if x < 2.2:
-              y = 0.0255*((1+redshift)**1.6)*(x**2.1) +0.325*(x**1.2) -0.250*(x**2.1)
-           elif x >= 2.2 and x < (redshift+1):
-              y = 0.0255*(((1+redshift)**1.6)*(x**2.1)-(x**3.7))
-           else:
-              y = 0
-           tau.append(y) 
-    
+        idx1 = wav < 2.2
+        idx2 = np.logical_and(wav >= 2.2, wav <(redshift+1))
+        
+        tau[idx1] = (0.0255*((1+redshift)**1.6)*(wav[idx1]**2.1) 
+                           +0.325*(wav[idx1]**1.2) -0.250*(wav[idx1]**2.1))
+           
+        tau[idx2] = 0.0255*(((1+redshift)**1.6)*(wav[idx2]**2.1)-(wav[idx2]**3.7))
     else:
-        for x in wav:
-            if x < 2.2:
-               y = 0.000522*((1+redshift)**3.4)*(x**2.1) + 0.325*(x**1.2) - 0.0314*(x**2.1)
-            elif x >= 2.2 and x < 5.7:
-               y = 0.000522*((1+redshift)**3.4)*(x**2.1) +0.218*(x**2.1) -0.0255*(x**3.7)
-            elif x >= 5.7 and x< (1+redshift):
-               y = 0.000522*(((1+redshift)**3.4)*(x**2.1)- (x**5.5))
-            else:
-               y= 0
-            tau.append(y)
+        idx1 = wav < 2.2
+        idx2 = np.logical_and(wav >= 2.2, wav <5.7)
+        idx3 = np.logical_and(wav >= 5.7, wav < (redshift+1))
+        
+        tau[idx1] = (0.000522*((1+redshift)**3.4)*(wav[idx1]**2.1) 
+                     + 0.325*(wav[idx1]**1.2) - 0.0314*(wav[idx1]**2.1))
+        
+        tau[idx2] =  (0.000522*((1+redshift)**3.4)*(wav[idx2]**2.1) 
+                      +0.218*(wav[idx2]**2.1) -0.0255*(wav[idx2]**3.7))            
+            
+        tau[idx3] = 0.000522*(((1+redshift)**3.4)*(wav[idx3]**2.1)- (wav[idx3]**5.5))
+​
     return tau
-    
-    
+​
+​
 def lyman_continuum_DLA(redshift, lambda_obs):
-    tau =[]
+    
     ll = 911.8                   #lyman-limit
     wav = lambda_obs/ll
-    if redshift < 2:
-       for x in wav:
-           if x <(1+redshift):
-              y = 0.211*((1+redshift)**2) - 0.0766*((1+redshift)**2.3)*(x**(-0.3))-0.135*(x**2)
-           else:
-              y = 0
-           tau.append(y)
+    tau = np.zeros((len(lambda_obs),))
     
+    if redshift < 2:
+        idx = wav < (1+redshift) 
+        tau[idx] = 0.211*((1+redshift)**2) - 0.0766*((1+redshift)**2.3)*(wav[idx]**(-0.3))-0.135*(wav[idx]**2) 
+​
     else:
-       for x in wav:
-           if x < 3:
-              y = 0.634 +0.047*((1+redshift)**3) -0.0178*((1+redshift)**3.3)*(x**(-0.3))-0.135*(x**2)-0.291*(x**(-0.3))
-           elif x >= 3 and x < (1+redshift):
-              y = 0.047*((1+redshift)**3)-0.0178*((1+redshift)**3.3)*(x**(-0.3))-0.0292*(x**3)
-           else:
-              y = 0
-           tau.append(y)
+        idx1 = wav < 3
+        idx2 = np.logical_and(wav >=3, wav < (1+redshift))
+   
+        tau[idx1] = (0.634 + 0.047*((1+redshift)**3) -0.0178*((1+redshift)**3.3)*(wav[idx1]**(-0.3))
+                    -0.135*(wav[idx1]**2)-0.291*(wav[idx1]**(-0.3)))
+           
+        tau[idx2] = 0.047*((1+redshift)**3)-0.0178*((1+redshift)**3.3)*(wav[idx2]**(-0.3))-0.0292*(wav[idx2]**3)
+    
     return tau
+    
+​
+def lyman_series_LAF(redshift, lambda_obs, coefficients):
+    
+    wav = lambda_obs ##just for clarity
+    tau = np.zeros((len(lambda_obs), coefficients.shape[0]))
+    
+    for j in range(coefficients.shape[0]):
+    
+        idx1 = np.logical_and.reduce([wav < coefficients[j,1]*2.2, 
+                                     wav > coefficients[j,1], 
+                                     wav < coefficients[j,1]*(redshift+1)], axis = 0)
+        
+        idx2 = np.logical_and.reduce([wav >= coefficients[j,1]*2.2, 
+                                      wav < coefficients[j,1]*5.7, 
+                                      wav < coefficients[j,1]*(redshift+1)], axis = 0)
+        idx3 = np.logical_and.reduce([~np.logical_or(idx1, idx2),
+                                      wav > coefficients[j,1], 
+                                      wav < coefficients[j,1]*(redshift+1)], axis = 0)
+        
+        tau[idx1, j] = coefficients[j,2]*((wav[idx1]/coefficients[j,1])**1.2)
+        
+        tau[idx2, j] = coefficients[j,3]*((wav[idx2]/coefficients[j,1])**3.7)
+    
+        tau[idx3, j] = coefficients[j,4]*((wav[idx3]/coefficients[j,1])**5.5)
+    
+    return np.sum(tau, axis = 1)
+    
+    
+def lyman_series_DLA(redshift, lambda_obs, coefficients):
+    
+    wav = lambda_obs ##just for clarity
+    tau = np.zeros((len(lambda_obs), coefficients.shape[0]))
+    
+    for j in range(coefficients.shape[0]):
+        
+        idx1 = np.logical_and.reduce([wav < coefficients[j,1]*3, 
+                                      wav > coefficients[j,1],
+                                      wav < coefficients[j,1]*(redshift+1)], axis = 0)
+        idx2 = np.logical_and.reduce([~idx1, 
+                                      wav >coefficients[j,1],
+                                      wav < coefficients[j,1]*(redshift+1)], axis = 0)
+    
+            
+        tau[idx1, j] = coefficients[j,5]*((wav[idx1]/coefficients[j,1])**2)
+               
+        tau[idx2, j] = coefficients[j,6]*((wav[idx2]/coefficients[j,1])**3)
+              
+           
+    return np.sum(tau, axis = 1)
+    
+    
+def get_IGM_absorption(redshift, lambda_obs, coefficients = get_lyman_coefficients(), DLA = True):
+     """ Optical depth computed according to Inoue et al. 2014
+    """
+    tau_continuum_laf = lyman_continuum_LAF(redshift, lambda_obs)
+    tau_series_laf = lyman_series_LAF(redshift, lambda_obs, coefficients)
+    if not DLA:
+         return  tau_continuum_laf + tau_series_laf 
+    else:  
+        tau_continuum_dla = lyman_continuum_DLA(redshift, lambda_obs)
+        tau_series_dla = lyman_series_DLA(redshift, lambda_obs, coefficients)
+        return  tau_continuum_laf +  tau_continuum_dla + tau_series_laf + tau_series_dla
+
+
+def get_lyman_coefficients(coefficients_path= "tables/lyman_series_coefficients.dat")
+    return np.loadtxt(coefficient_path)
+
     
 def correct_magnitudes(redshift, filter_path, emission_lines = True, IGM = True, DLA = True, spectrum_path = '~/DATA/tables/vanden_berk_13.dat'):
     '''
     It returns an array with the magnitude corrections.
-    It requires an array with sources redshift and an array with the path to the filter tranmission(s) file.
+    It requires an array with sources redshift and an array with the path to the filter transmission (s) file.
     '''
     lambda_obs = np.loadtxt(filter_path)
     transmission = lambda_obs[:,1]
