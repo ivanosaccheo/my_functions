@@ -36,7 +36,7 @@ import pytz
 
 
 
-PATH_TO_DATA =  ""
+PATH_TO_DATA =  "DATA"
 
 
 
@@ -408,14 +408,20 @@ class filtro():
     def convolve(self, wavelengths, flux, magnitudes = True,
               left = np.nan, right = np.nan):
         """flux in erg/s cm^-2, magnitudes = True return -2.5*log10(flux)"""
+        
+        if not hasattr(self, "transmission"):
+            self.get_transmission()
+
         flux = np.interp(self.transmission[:,0], wavelengths, flux, 
                           left = left, right = right)
         num = np.trapz(flux*self.transmission[:,1], self.transmission[:,0])/2.998e18
         den = np.trapz(self.transmission[:,1]/self.transmission[:,0], self.transmission[:,0])
+        flux_nu = num/den
         if magnitudes:
-            return -2.5 * np.log10(num/den)
+            return -2.5 * np.log10(flux_nu)
         else:
-            return num/den
+            
+            return (flux_nu/self.wav)*2.998e18
             
  ########### AGN /SED
 
@@ -622,6 +628,46 @@ def lusso_recipe(lambda_start, L_start, L_1kev, Npoints = 30):
     
    
   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
