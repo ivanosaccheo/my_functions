@@ -383,7 +383,8 @@ class filtro():
         matching_names = [i for i in names if filter_name.casefold() in i.casefold()]
         
         if len(matching_names) == 1:
-            self.name = matching_names[0]
+            self.name = matching_names[0][:-4]
+            self.filename = matching_names[0]
             return None
         elif len(matching_names) > 1:
             matching_names.sort()
@@ -397,11 +398,11 @@ class filtro():
       
     def get_effective_wavelength(self):
         table = pd.read_csv(os.path.join(self.path, "filter_list.txt"), delim_whitespace = True)
-        eff_wav = float(table[table['Name'] == self.name[:-4]]['eff_wavelength'].iloc[0])
+        eff_wav = float(table[table['Name'] == self.name]['eff_wavelength'].iloc[0])
         return eff_wav
         
     def get_transmission(self):
-        self.transmission = np.loadtxt(os.path.join(self.path, self.name))
+        self.transmission = np.loadtxt(os.path.join(self.path, self.filename))
         self.wav_min = np.min(self.transmission[self.transmission[:,1]>0,0])
         self.wav_max = np.max(self.transmission[self.transmission[:,1]>0,0])
     
