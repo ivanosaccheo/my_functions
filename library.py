@@ -405,22 +405,28 @@ class filtro():
         self.wav_min = np.min(self.transmission[self.transmission[:,1]>0,0])
         self.wav_max = np.max(self.transmission[self.transmission[:,1]>0,0])
     
-    def convolve(self, wavelengths, flux, magnitudes = True,
-              left = np.nan, right = np.nan):
-        """flux in erg/s cm^-2, magnitudes = True return -2.5*log10(flux)"""
-        
+    def convolve(self, wavelengths, f_lambda, return_magnitude = True,
+              left = 0, right = 0):
+        """
+        Output : magnitude if return_magnitude = False, else lambda * F_lambda at the effective wavelength
+        of the filter.
+        No zero point so it must be used just for colors (???)
+        f_lambda = flux in erg/s cm^-2 A°^-1
+        wavelengths = wavelength of f_lambda
+        left, right = per np.interp se il flusso non compre tutto l'intervallo della trasmissione del filtro
+        """
         if not hasattr(self, "transmission"):
             self.get_transmission()
 
-        flux = np.interp(self.transmission[:,0], wavelengths, flux, 
-                          left = left, right = right)
-        num = np.trapz(flux*self.transmission[:,1], self.transmission[:,0])/2.998e18
-        den = np.trapz(self.transmission[:,1]/self.transmission[:,0], self.transmission[:,0])
-        flux_nu = num/den
-        if magnitudes:
-            return -2.5 * np.log10(flux_nu)
+        f_lambda_filter = np.interp(self.transmission[:,0], wavelengths, f_lambda, 
+                                    left = left, right = right)
+        numeratore = np.trapz(flux_lambda_filter*self.transmission[:,1]*self.transmission[:,0], 
+                              self.transmission[:,0])/2.998e18
+        denominatore = np.trapz(self.transmission[:,1]/self.transmission[:,0], self.transmission[:,0])
+        f_nu = numeratore/denominatore
+        if return_magnitude:
+            return -2.5 * np.log10(f_nu) - 48.6
         else:
-            
             return (flux_nu/self.wav)*2.998e18
             
  ########### AGN /SED
