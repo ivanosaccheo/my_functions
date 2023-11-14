@@ -420,7 +420,7 @@ class filtro():
 
         f_lambda_filter = np.interp(self.transmission[:,0], wavelengths, f_lambda, 
                                     left = left, right = right)
-        numeratore = np.trapz(flux_lambda_filter*self.transmission[:,1]*self.transmission[:,0], 
+        numeratore = np.trapz(f_lambda_filter*self.transmission[:,1]*self.transmission[:,0], 
                               self.transmission[:,0])/2.998e18
         denominatore = np.trapz(self.transmission[:,1]/self.transmission[:,0], self.transmission[:,0])
         f_nu = numeratore/denominatore
