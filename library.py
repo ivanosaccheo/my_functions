@@ -231,7 +231,7 @@ def three_2_two(data, *args, band_names = None, all_names = None ):
     
     elif band_names and Ndata ==3:
        name_array =[]
-       for i,name in enumerate(band_names):
+       for I, name in enumerate(band_names):
            if i <  Nbands:
                name_array.append('lambda_'+name)
                name_array.append(name)
@@ -241,7 +241,7 @@ def three_2_two(data, *args, band_names = None, all_names = None ):
 
     elif band_names and Ndata ==2:
        name_array =[]
-       for i,name in enumerate(band_names):
+       for I, name in enumerate(band_names):
            if i <  Nbands:
                name_array.append(name)
                name_array.append('err_'+name)
@@ -428,7 +428,7 @@ class filtro():
         if return_magnitude:
             return -2.5 * np.log10(f_nu) - 48.6
         else:
-            return (flux_nu/self.wav)*2.998e18
+            return (f_nu/self.wav)*2.998e18
             
  ########### AGN /SED
 
