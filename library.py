@@ -489,7 +489,7 @@ def get_sed(which_sed='krawczyk', which_type='All', normalization=False, log_log
                 SED = pd.read_csv(fname, header = None, delim_whitespace=True).to_numpy()
                 x, y = SED[:,0], SED[:,1] #for consistency with other tables
                 y = np.log10(x*y) #lambdaF_lambda
-                x = y = np.log10(x)
+                x = np.log10(x)
             except FileNotFoundError:
                 print(f"{which_type} not found, available SEDs from Polletta are:")
                 available_sed = [i for i in os.listdir(path) if i.endswith(".sed")]
