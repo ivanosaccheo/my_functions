@@ -36,7 +36,7 @@ import pytz
 
 
 
-PATH_TO_DATA =  "DATA"
+PATH_TO_DATA =  "my_functions"
 
 
 
