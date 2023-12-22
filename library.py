@@ -475,9 +475,9 @@ def get_sed(which_sed='krawczyk', which_type='All', normalization=False, log_log
         else:
             raise Exception("which_type can be 'All', 'blue', 'red', 'opt_lum', 'opt_dim', 'ir_lum', 'ir_dim' ")
     
-    elif which_sed.casefold() == 'polletta':
+    elif "polletta" in which_sed.lower():
         path = os.path.join(path, "polletta")
-        if which_type.casefold() == "all":
+        if "all" in which_type.lower():
              available_sed = [i for i in os.listdir(path) if i.endswith(".sed")]
              print("Available SEDs from Polletta are:")
              for name in available_sed:
