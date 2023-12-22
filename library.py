@@ -504,7 +504,7 @@ def get_sed(which_sed='krawczyk', which_type='All', normalization=False, log_log
         x = np.log10(x)     
         
     else:
-        raise Exception("Which_sed can be 'wissh', 'krawczyk', 'richards' 'polletta', "'vandenberk'")
+        raise Exception("Which_sed can be 'wissh', 'krawczyk', 'richards' 'polletta', 'vandenberk'")
 
     
     
