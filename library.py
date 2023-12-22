@@ -474,10 +474,35 @@ def get_sed(which_sed='krawczyk', which_type='All', normalization=False, log_log
             y = SED['ir_dim'].to_numpy()
         else:
             raise Exception("which_type can be 'All', 'blue', 'red', 'opt_lum', 'opt_dim', 'ir_lum', 'ir_dim' ")
+    
+    elif which_sed.casefold() == 'polletta':
+        path = os.path.join(path, "polletta")
+        if which_type.casefold() == "all":
+             available_sed = [i for i in os.listdir(path) if i.endswith(".sed")]
+             print("Available SEDs from Polletta are:")
+             for name in available_sed:
+                 print(name.replace("_template_norm.sed", ""))
+             return None
+        else:
+            fname = os.path.join(path,f"{which_type}_template_norm.sed")
+            try:
+                SED = pd.read_csv(fname, header = None, delim_whitespace=True).to_numpy()
+                x, y = SED[:,0], SED[:,1] #for consistency with other tables
+                y = np.log10(x*y) #lambdaF_lambda
+                x = y = np.log10(x)
+            except FileNotFoundError:
+                print(f"{which_type} not found, available SEDs from Polletta are:")
+                available_sed = [i for i in os.listdir(path) if i.endswith(".sed")]
+                for name in available_sed:
+                     print(name.replace("_template_norm.sed", ""))
+                raise Exception 
         
         
     else:
-        raise Exception("Which_sed can be 'wissh', 'krawczyk', 'richards' ")
+        raise Exception("Which_sed can be 'wissh', 'krawczyk', 'richards' 'polletta', "'vandenberk'")
+
+    
+    
     if normalization and log_log:
         normalization = [10**k for k in normalization]
         x = 10**x
