@@ -496,7 +496,12 @@ def get_sed(which_sed='krawczyk', which_type='All', normalization=False, log_log
                 for name in available_sed:
                      print(name.replace("_template_norm.sed", ""))
                 raise Exception 
-        
+    
+    elif "berk" in which_sed.lower():
+        SED = pd.read_csv(os.path.join(path,'vanden_berk_composite.dat') , delim_whitespace = True, header=0)
+        x = SED["lambda"].to_numpy()
+        y = np.log10(x*SED["f_lambda"].to_numpy())
+        x = np.log10(x)     
         
     else:
         raise Exception("Which_sed can be 'wissh', 'krawczyk', 'richards' 'polletta', "'vandenberk'")
@@ -527,7 +532,7 @@ def get_sed(which_sed='krawczyk', which_type='All', normalization=False, log_log
 
 
 def get_host(path ='tables/sed_templates/host_galaxy_sed.csv'):
-     path = os.path.join(PATH_TO_DATA ,path)
+     path = os.path.join(PATH_TO_DATA, path)
    
      return pd.read_csv(path, header = 0, sep = ',' ).to_numpy()
 
