@@ -435,12 +435,12 @@ class filtro():
 
 def abs_mag_2_L(abs_M, wavlen):
     nuFnu = (10**(-0.4*(abs_M+48.6)))*2.998e18/wavlen
-    dl = constants.pc.cgs.value
-    return nuFnu*4*np.pi*dl*dl
+    d = 10*constants.pc.cgs.value
+    return nuFnu*4*np.pi*d*d
 
 def L_2_abs_mag(L, wavlen):
-    dl = constants.pc.cgs.value
-    fnu = (L/(4*np.pi*dl*dl))*wavlen/2.998e18
+    d = 10*constants.pc.cgs.value
+    fnu = (L/(4*np.pi*d*d))*wavlen/2.998e18
     return -2.5*np.log10(fnu) -48.6
 
             
