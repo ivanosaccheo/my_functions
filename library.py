@@ -10,13 +10,16 @@
 # get_magnitudes     from luminosities to AB magnitudes 
 # monochromatic_lum  compute monochromatic luminosities
 # merge_bands        merge photometry in the same band (e.g. ukidss K and 2mass K) into one column !!!!!to_be_improved!!!!
+#L_2_abs_mag / abs_mag2_L conversion between lumnosities and absolute magnitudes
 
 ### AGN/sed related
 # get_sed            get AGN sed template
 # get_host           get host_template
-# find_normalization Single component sed fitting
-# compute_xray_luminosity    compute the xray luminosity using the alpha_OX by Lusso+10
-#lusso_recipe         compute the sed between 911/1216 A° and 1kev using the same recipe as in Lusso+10
+#find_normalization  Single component sed fitting
+#lusso_recipe        compute the sed between 911/1216 A° and 1kev using the same recipe as in Lusso+10
+#get_xray_luminosity compute the xray luminosity using the alpha_OX by Lusso+10/16
+#move_xray_band         compute the Xray luminosity from another xray band
+#get_integrated_xray    compute the integrated xray luminosity
 
 
 
@@ -429,6 +432,17 @@ class filtro():
             return -2.5 * np.log10(f_nu) - 48.6
         else:
             return (f_nu/self.wav)*2.998e18
+
+def abs_mag_2_L(abs_M, wavlen):
+    nuFnu = (10**(-0.4*(abs_M+48.6)))*2.998e18/wavlen
+    dl = constants.pc.cgs.value
+    return nuFnu*4*np.pi*dl*dl
+
+def L_2_abs_mag(L, wavlen):
+    dl = constants.pc.cgs.value
+    fnu = (L/(4*np.pi*dl*dl))*wavlen/2.998e18
+    return -2.5*np.log10(fnu) -48.6
+
             
  ########### AGN /SED
 
@@ -595,35 +609,6 @@ def find_normalization(wavelengths, L, err_L, sed, lambda_min=1216, lambda_max=5
     norm_max = (Syf+np.sqrt(Delta))/Sff
     return norm, norm_min, norm_max, chi2
 
-
-def compute_xray_luminosity(l2500, energy=2, photon_index=1.7):
-    """
-    Deriva la luminosita X a partire dalla relazione di Lusso+10 Log(Lx)   = 0.599 Log(Luv) +8.275.
-    Lx è trasformata da 2 kev all'energia specificata da energy assumendo un photon index Gamma
-    lambda*L = lambda^(Gamma-2)
-
-    Parameters
-    ----------
-    l2500 : Float
-            2500 A° luminosity in erg/s
-    energy : Float, optional
-             banda in kev a cui calcolare Lx. The default is 2.
-    photon_index : float, optional
-             Photon index 
-
-    Returns
-    Lx
-    """
-    wav = 12.398/energy
-    # Trasformo in L_nu e prendo il log
-    l2500 = np.log10(l2500*(2500/2.998e18))
-    l2kev = 0.599*l2500+8.275
-    l2kev = ((10**l2kev)*(2.998e18/6.199))  # trasformo in lambda*L
-    A = l2kev/(6.199**(photon_index-2))
-    lx = (wav**(photon_index-2))*A
-    return lx
-
-
 def lusso_recipe(lambda_start, L_start, L_1kev, Npoints = 30):
     """
      fornisce la sed tra lambda_start e lambda = 1 keV come Lusso+10:
@@ -650,11 +635,64 @@ def lusso_recipe(lambda_start, L_start, L_1kev, Npoints = 30):
     
     sed =np.concatenate([sed_1, sed_2], axis = 0)
     sed = sed[sed[:,0].argsort()]
-    
-
     return sed
 
+def move_xray_band(Lstart, energy_start, energy_final, photon_index = 1.8):
+    """
+    Computes the Xray luminosity from one band (energy_start) to another (energy_final)
+    Lstart = luminosity in erg/s
+    energY_start/energy_final = wavlengths in keV
+    """
+    wav_start = 12.398/energy_start
+    wav_final = 12.398/energy_final
+    return Lstart*(wav_final/wav_start)**(photon_index-2)
 
+def get_xray_luminosity(L2500, energy = 2, photon_index = 1.8, 
+                            recipe = "lusso+16"):
+    """
+    Deriva la luminosita X a energia = energy a partire dalla relazione L_UV-L_x
+    Lx è trasformata da 2 kev all'energia specificata da energy assumendo un photon index Gamma
+    lambda*L = lambda^(Gamma-2)
+
+    Parameters
+    ----------
+    l2500 : Float
+            2500 A° luminosity in erg/s
+    energy : Float, optional
+             banda in kev a cui calcolare Lx. The default is 2.
+    photon_index : float, optional
+             Photon index 
+    recipe : string, optional
+             which parameters to use to derive Lx, either lusso+10 or lusso+16
+
+    Returns
+    Lx
+    """
+    parametri = {"lusso+16" : [0.642, +6.965],
+                 "lusso+10" : [0.599, +8.275]}
+    if recipe not in parametri.keys():
+        raise Exception(f"recipe must be among {[i for i in parametri.keys()]}")
+    alpha, beta = parametri[recipe]
+    l2500 = np.log10(L2500*(2500/2.998e18))
+    l2kev =alpha*l2500+beta
+    l2kev = ((10**l2kev)*(2.998e18/6.199))
+    return move_xray_band(l2kev, 2, energy, photon_index = photon_index)
+
+
+def get_integrated_xray(L_start, energy_start, energy_1 = 2, energy_2 = 10, photon_index = 1.8):
+    """
+    Calcola la luminnosità intrgrata tra energy_1 e energy_2 a partire da una luminosità L_start a
+    energy_start. Assume che L_lambda \propoto \lambda^(photon_index-3)
+    """
+    ### L_lambda ~ lambda^gamma-3
+    if photon_index != 2:
+        L_1 = move_xray_band(Lstart= L_start, energy_start=energy_start, energy_final=energy_1, 
+                             photon_index = photon_index)
+        L_2 = move_xray_band(Lstart= L_start, energy_start=energy_start, energy_final=energy_2, 
+                             photon_index = photon_index)
+        return np.abs((1/(photon_index-2))*(L_1-L_2))   ##abs in case energies are not sorted
+    else:
+        return np.abs(L_start*np.log(energy_1/energy_2))
 
 
 
