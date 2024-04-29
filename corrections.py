@@ -285,6 +285,92 @@ def process_errors(magnitudes, minimum_error = 0.0, get_fit= True, deg = 3, shif
     return pro_magnitudes, coefficients
          
 
+###### Reddening laws
+def calzetti_2000(wavlen, Rv = 4.05):
+    k_lambda = np.ones(len(wavlen))
+    logic = (wavlen <= 6300)
+    l1 =  wavlen[logic]/1e4
+    l2 = wavlen[~logic]/1e4
+    k_lambda[logic] =  2.659*(-2.156 + 1.509/l1 - 0.198/(l1*l1) +0.011/(l1*l1*l1)) + Rv
+    k_lambda[~logic] = 2.659*(-1.857 +1.040/l2) + Rv
+    return k_lambda
+
+def prevot_1984(wavlen):
+    return 1.39 * ((wavlen/1e4)**(-1.2))
+
+def charlot_2000(wavlen, ism_fraction = 0.6):
+    ism_fraction = np.clip(ism_fraction, 0, 1)
+    slope_ism = -0.7
+    slope_bc = -1.3
+    k_lambda_ism = ism_fraction*(wavlen**slope_ism)
+    k_lambda_bc = (1-ism_fraction)*(wavlen**slope_bc)
+    k_lambda =  k_lambda_ism+k_lambda_bc
+    wavlen_v = 5431.91   ## Vimos 
+    wavlen_b = 4288.94   ## Vimos
+    f = interp1d(wavlen, k_lambda, fill_value='extrapolate')
+    norma = 1/(f(wavlen_b)- f(wavlen_v)) #k(B)-k(V) = 1
+    
+    return norma*k_lambda
+
+class reddening_law:
+
+    def __init__(self, ebv = 0, Av = None, law = "calzetti", Rv = "default",
+                 ism_fraction = 0.5):
+        self.ebv = ebv
+        self.Av = Av
+        self.law = law.casefold()
+        if Rv == "default":
+            Rv_dict = {"calzetti" : 4.05, "prevot" : 2.72, "charlot" : 3.1}
+            self.Rv = Rv_dict[self.law]
+        else: 
+            self.Rv = Rv
+        if self.Av is None: self.update_Av()
+        else: self.update_ebv()
+        self.ism_fraction = ism_fraction
+        return None
+    
+    def get_k_lambda(self, wavlen):
+        if "calzetti" in self.law:
+            self.k_lambda = calzetti_2000(wavlen, Rv = self.Rv)
+        elif "prevot" in self.law:
+            self.k_lambda = prevot_1984(wavlen)
+        elif "charlot" in self.law:
+            self.k_lambda = charlot_2000(wavlen, ism_fraction=self.ism_fraction)
+        else: 
+            raise Exception("law must be 'calzetti', 'prevot' or 'charlot'")
+        return None
+    
+    def get_tau_lambda(self, control_negative = True):
+        if not hasattr(self, "k_lambda"):
+            self.get_k_lambda()
+        self.tau_lambda = (self.k_lambda*self.ebv)/1.086
+        if control_negative:
+             self.tau_lambda[self.tau_lambda<0] =0
+        return None 
+    
+    def get_A_lambda(self, control_negative = True):
+        if not hasattr(self, "k_lambda"):
+            self.get_k_lambda()
+        self.A_lambda = (self.k_lambda*self.ebv)
+        if control_negative:
+             self.A_lambda[self.A_lambda<0] =0
+        return None
+        
+    def get_extinction(self, wavlen):
+        if not hasattr(self, "k_lambda"):
+            self.get_k_lambda(wavlen)
+        self.get_tau_lambda()
+        self.extinction = np.exp(-self.tau_lambda)
+        return None
+    
+    def update_ebv(self):
+        self.ebv = self.Av/self.Rv
+        return None
+    
+    def update_Av(self):
+        self.Av = self.ebv*self.Rv
+        return None
+
 
 
 
