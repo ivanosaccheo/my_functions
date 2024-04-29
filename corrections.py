@@ -340,17 +340,17 @@ class reddening_law:
             raise Exception("law must be 'calzetti', 'prevot' or 'charlot'")
         return None
     
-    def get_tau_lambda(self, control_negative = True):
+    def get_tau_lambda(self, wavlen, control_negative = True):
         if not hasattr(self, "k_lambda"):
-            self.get_k_lambda()
+            self.get_k_lambda(wavlen)
         self.tau_lambda = (self.k_lambda*self.ebv)/1.086
         if control_negative:
              self.tau_lambda[self.tau_lambda<0] =0
         return None 
     
-    def get_A_lambda(self, control_negative = True):
+    def get_A_lambda(self, wavlen, control_negative = True):
         if not hasattr(self, "k_lambda"):
-            self.get_k_lambda()
+            self.get_k_lambda(wavlen)
         self.A_lambda = (self.k_lambda*self.ebv)
         if control_negative:
              self.A_lambda[self.A_lambda<0] =0
@@ -359,7 +359,7 @@ class reddening_law:
     def get_extinction(self, wavlen):
         if not hasattr(self, "k_lambda"):
             self.get_k_lambda(wavlen)
-        self.get_tau_lambda()
+        self.get_tau_lambda(wavlen)
         self.extinction = np.exp(-self.tau_lambda)
         return None
     
