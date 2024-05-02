@@ -304,7 +304,7 @@ def get_luminosity(magnitudes, redshift, H0=70, Om0 =0.3, Return_Fluxes = False)
                  luminosity[:, i, 2] = luminosity[:, i, 2]*dl*dl*4*np.pi
     
     else:
-        raise exception('wrong format for magnitudes')
+        raise Exception('wrong format for magnitudes')
     
     return luminosity         
 
