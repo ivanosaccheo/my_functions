@@ -171,7 +171,7 @@ def two_2_three(data, extra_features = False, has_wavelength=True):
             raw_features = [i for i in range(data.shape[1]) if i not in extra_features]
             raw_data = data[:,raw_features]
     else:
-        raise exception('Data ust be a Pandas DataFrame or a numpy 2D array')
+        raise Exception('Data ust be a Pandas DataFrame or a numpy 2D array')
      
     Nqso = raw_data.shape[0]
     if has_wavelength:  
