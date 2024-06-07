@@ -34,6 +34,7 @@ import os
 import glob
 from astropy import units
 from astropy.cosmology import FlatLambdaCDM
+from astropy import constants
 import datetime 
 import pytz
 
@@ -693,6 +694,38 @@ def get_integrated_xray(L_start, energy_start, energy_1 = 2, energy_2 = 10, phot
         return np.abs((1/(photon_index-2))*(L_1-L_2))   ##abs in case energies are not sorted
     else:
         return np.abs(L_start*np.log(energy_1/energy_2))
+    
+class quasar_lines:
+    """Loads Table 2 (list of all observed lines in QSO spectrum) in Vanden Berk+2001"""
+    def __init__(self, maxrows = 20, flux_sorted = True, remove_iron = False,
+                 dropped_columns = None):
+        path = os.path.join(PATH_TO_DATA,"tables/various","vanden_berk_2001_tab2.dat")
+        self.table = pd.read_csv(path, sep=' ')
+        if flux_sorted:
+            self.table.sort_values(by="flux", inplace = True, ascending = False)
+        if remove_iron:
+            self.table = self.table[~self.table["ID"].str.contains("Fe")]
+        if maxrows is not None and maxrows<= len(self.table):
+            self.table = self.table.iloc[:maxrows, :]
+        if dropped_columns is not None:
+            self.table = self.table.drop(columns = dropped_columns)
+        self.table = self.table.reset_index(drop = True)
+        
+        return None
+    
+    def get_plot_ID(self):
+        new_names = [name.replace("{" ,"$\\") for name in self.table["ID"]]
+        new_names = [name.replace("}" ,"$") for name in new_names]
+        self.table["plot_ID"] = new_names
+        return None
+    
+def get_quasar_lines(maxrows = 25, flux_sorted = True, remove_iron = True,
+                 dropped_columns = ["u_ID",	"f_ID", "e_obs_wave", "e_flux", "e_flux",
+                                    "f_width", "skew", "e_EW"]):
+    qso_lines = quasar_lines(maxrows = maxrows, flux_sorted=flux_sorted, 
+                             remove_iron = remove_iron, dropped_columns = dropped_columns)
+    qso_lines.get_plot_ID()
+    return qso_lines.table
 
 
 
