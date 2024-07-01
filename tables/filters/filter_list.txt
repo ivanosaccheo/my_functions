@@ -69,4 +69,10 @@ Swift_UVOT.UVW1    2681.67
 Swift_UVOT.U       3520.88
 Swift_UVOT.B       4345.28
 Swift_UVOT.V       5411.45
-
+Spitzer_IRAC.I1    35074.83
+Spitzer_IRAC.I2    44365.56
+Spitzer_IRAC.I3    56280.62
+Spitzer_IRAC.I4    75890.54
+Spitzer_MIPS.24mu  232089.81
+Spitzer_MIPS.70mu  684400.65
+Spitzer_MIPS.160mu 1.53e6
