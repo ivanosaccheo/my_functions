@@ -694,6 +694,24 @@ def get_integrated_xray(L_start, energy_start, energy_1 = 2, energy_2 = 10, phot
         return np.abs((1/(photon_index-2))*(L_1-L_2))   ##abs in case energies are not sorted
     else:
         return np.abs(L_start*np.log(energy_1/energy_2))
+
+def get_mono_xray_from_integrated(energy, L_integrated, energy_1 = 2, energy_2 = 10,
+                                  photon_index = 1.8):
+    """calcola la luminoxita monocromatica in lambda*L_lambda alle energie 'energy'
+       a partire da una luminosità integrata tra energy_1 e energy_2
+    """
+    wav_start = 12.398/energy_1
+    wav_final = 12.398/energy_2
+    wav = 12.398/np.array(energy)
+    if photon_index != 2:
+        normalization = (photon_index-2)*L_integrated
+        normalization = normalization/(wav_start**(photon_index-2)-wav_final**(photon_index-2))
+    else:
+        normalization = L_integrated/np.log(wav_start/wav_final)
+
+    normalization = np.abs(normalization)
+    L = normalization*(wav**(photon_index-2))
+    return L
     
 class quasar_lines:
     """Loads Table 2 (list of all observed lines in QSO spectrum) in Vanden Berk+2001"""
