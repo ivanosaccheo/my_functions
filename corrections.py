@@ -390,10 +390,11 @@ def get_continuum_vandenberk(xx, wav_break = 5300):
 
 def get_lines_vandenberk(wavlen, table):
     xx = np.repeat(np.expand_dims(wavlen, axis =1), len(table), axis =1)
-    lyalpha_normalization = get_line_normalization_vandenberk(92.91, 1160, 1290)
+    lyalpha_normalization = get_line_normalization_vandenberk(1216.25, 1160, 1290, 92.91, 19.46)
     lines_luminosity = (table["flux"]*lyalpha_normalization/100).to_numpy()
     template = (lines_luminosity*stats.norm.pdf(xx, loc = table["obs_wav"].to_numpy(), scale=table["width"].to_numpy())).sum(axis =1)
     return template
+
 
 
 
