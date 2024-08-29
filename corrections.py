@@ -5,7 +5,7 @@ import numpy.polynomial.polynomial as poly
 from  my_functions import library as lb
 import pandas as pd
 from scipy.interpolate import interp1d
-
+from scipy import stats
 
 
 PATH_TO_DATA =  "my_functions"
@@ -370,6 +370,30 @@ class reddening_law:
     def update_Av(self):
         self.Av = self.ebv*self.Rv
         return None
+
+
+def get_line_normalization_vandenberk(obs_wav, wav_min, wav_max, equivalent_width, stddev):
+    ### Only used in get_lines_vandenberk
+    xx = np.linspace(wav_min, wav_max, 1000)
+    continuum = get_continuum_vandenberk(xx)
+    line = stats.norm.pdf(xx, loc = obs_wav, scale = stddev)
+    norm = equivalent_width/np.trapz(line/continuum, xx)
+    return np.abs(norm)
+    
+
+def get_continuum_vandenberk(xx, wav_break = 5300):
+    alpha_lambda_1 = -1.56
+    alpha_lambda_2 = 0.45
+    K = wav_break**(alpha_lambda_1-alpha_lambda_2)
+    continuum = np.where(xx<=wav_break, xx**alpha_lambda_1, K*xx**alpha_lambda_2)
+    return continuum
+
+def get_lines_vandenberk(wavlen, table):
+    xx = np.repeat(np.expand_dims(wavlen, axis =1), len(table), axis =1)
+    lyalpha_normalization = get_line_normalization_vandenberk(92.91, 1160, 1290)
+    lines_luminosity = (table["flux"]*lyalpha_normalization/100).to_numpy()
+    template = (lines_luminosity*stats.norm.pdf(xx, loc = table["obs_wav"].to_numpy(), scale=table["width"].to_numpy())).sum(axis =1)
+    return template
 
 
 

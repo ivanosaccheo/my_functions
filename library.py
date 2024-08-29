@@ -501,7 +501,7 @@ def get_sed(which_sed='krawczyk', which_type='All', normalization=False, log_log
         else:
             fname = os.path.join(path,f"{which_type}_template_norm.sed")
             try:
-                SED = pd.read_csv(fname, header = None, delim_whitespace=True).to_numpy()
+                SED = pd.read_csv(fname, header = None, sep='\s+').to_numpy()
                 x, y = SED[:,0], SED[:,1] #for consistency with other tables
                 y = np.log10(x*y) #lambdaF_lambda
                 x = np.log10(x)
@@ -513,7 +513,7 @@ def get_sed(which_sed='krawczyk', which_type='All', normalization=False, log_log
                 raise Exception 
     
     elif "berk" in which_sed.lower():
-        SED = pd.read_csv(os.path.join(path,'vanden_berk_composite.dat') , delim_whitespace = True, header=0)
+        SED = pd.read_csv(os.path.join(path,'vanden_berk_composite.dat') , sep='\s+', header=0)
         x = SED["lambda"].to_numpy()
         y = np.log10(x*SED["f_lambda"].to_numpy())
         x = np.log10(x)     
@@ -716,9 +716,12 @@ def get_mono_xray_from_integrated(energy, L_integrated, energy_1 = 2, energy_2 =
 class quasar_lines:
     """Loads Table 2 (list of all observed lines in QSO spectrum) in Vanden Berk+2001"""
     def __init__(self, maxrows = 20, flux_sorted = True, remove_iron = False,
-                 dropped_columns = None):
+                 wavmin = None, dropped_columns = None):
         path = os.path.join(PATH_TO_DATA,"tables/various","vanden_berk_2001_tab2.dat")
-        self.table = pd.read_csv(path, sep=' ')
+        self.table = pd.read_csv(path, sep=' ', comment="#")
+
+        if wavmin is not None:
+            self.table = self.table[self.table["obs_wav"]>= wavmin]
         if flux_sorted:
             self.table.sort_values(by="flux", inplace = True, ascending = False)
         if remove_iron:
@@ -738,9 +741,10 @@ class quasar_lines:
         return None
     
 def get_quasar_lines(maxrows = 25, flux_sorted = True, remove_iron = True,
+                     wavmin = None,
                  dropped_columns = ["u_ID",	"f_ID", "e_obs_wave", "e_flux", "e_flux",
                                     "f_width", "skew", "e_EW"]):
-    qso_lines = quasar_lines(maxrows = maxrows, flux_sorted=flux_sorted, 
+    qso_lines = quasar_lines(maxrows = maxrows, flux_sorted=flux_sorted, wavmin = wavmin,
                              remove_iron = remove_iron, dropped_columns = dropped_columns)
     qso_lines.get_plot_ID()
     return qso_lines.table
