@@ -452,59 +452,35 @@ def get_sed(which_sed='krawczyk', which_type='All', normalization=False, log_log
     path = os.path.join(PATH_TO_DATA ,path)
    
     if 'krawczyk' in which_sed.lower():
-        SED = pd.read_csv(os.path.join(path,'krawczyk_sed.csv') , sep=',', header=0)
-        x = SED['lambda'].to_numpy()
-        if 'all' in which_type.lower():
-            y = SED['All'].to_numpy()
-        elif 'low' in which_type.lower():
-            y = SED['Low_luminosity'].to_numpy()
-        elif 'mid' in which_type.lower():
-            y = SED['Mid_luminosity'].to_numpy()
-        elif 'high' in which_type.lower():
-            y = SED['High_luminosity'].to_numpy()
-        else:
-            raise Exception("which_type can be 'All', 'mid', 'high', 'low'")
+        sed = pd.read_csv(os.path.join(path,'krawczyk_13.dat') , sep=' ', header=0, comment ='#')
+        sed_types = [i for  i in sed.columns[1:] if "sigma" not in i]
+        if which_type.casefold()  not in sed_types:
+            raise Exception(f"which_type must be one of {sed_types}")
+        x, y = sed["lambda"].to_numpy(), sed[which_type.casefold()].to_numpy()
     
     elif 'wissh' in which_sed.lower():
-        SED = pd.read_csv(os.path.join(path,'wissh_sed.csv') , sep=',', header=0)
-        x = np.log10(SED['lambda'].to_numpy())
-        y = np.log10(SED['L'].to_numpy())
-   
-    elif 'richards'in which_sed.lower():
-        SED = pd.read_csv(os.path.join(path,'richards_sed.csv') , sep=',', header=0)
-        x = SED['lambda'].to_numpy()
-        if 'all' in which_type.lower():
-            y = SED['all'].to_numpy()
-        elif 'blue' in which_type.lower():
-            y = SED['blue'].to_numpy()
-        elif 'red' in which_type.lower():
-            y = SED['red'].to_numpy()
-        elif 'opt_lum' in which_type.lower():
-            y = SED['opt_lum'].to_numpy()
-        elif 'opt_dim' in which_type.lower():
-            y = SED['opt_dim'].to_numpy()
-        elif 'ir_lum' in which_type.lower():
-            y = SED['ir_lum'].to_numpy()
-        elif 'ir_dim' in which_type.lower():
-            y = SED['ir_dim'].to_numpy()
-        else:
-            raise Exception("which_type can be 'All', 'blue', 'red', 'opt_lum', 'opt_dim', 'ir_lum', 'ir_dim' ")
+        sed = pd.read_csv(os.path.join(path,'wissh_S23.dat') , sep=' ', header=0)
+        x, y  = sed['lambda'].to_numpy(), sed["L"].to_numpy()
     
+    elif 'richards'in which_sed.lower():
+        SED = pd.read_csv(os.path.join(path,'richards_06.dat') , sep=' ', header=0, comment ='#')
+        sed_types = [i for  i in sed.columns[1:] if "sigma" not in i]
+        if which_type.casefold()  not in sed_types:
+            raise Exception(f"which_type must be one of {sed_types}")
+        x, y = sed["lambda"].to_numpy(), sed[which_type.casefold()].to_numpy()
+            
     elif "polletta" in which_sed.lower():
         path = os.path.join(path, "polletta")
         if "all" in which_type.lower():
-             available_sed = [i for i in os.listdir(path) if i.endswith(".sed")]
-             print("Available SEDs from Polletta are:")
-             for name in available_sed:
-                 print(name.replace("_template_norm.sed", ""))
-             return None
+            available_sed = [i for i in os.listdir(path) if i.endswith(".sed")]
+            print("Available SEDs from Polletta are:")
+            for name in available_sed: print(name.replace("_template_norm.sed", ""))
+            return None
         else:
             fname = os.path.join(path,f"{which_type}_template_norm.sed")
             try:
-                SED = pd.read_csv(fname, header = None, sep='\s+').to_numpy()
-                x, y = SED[:,0], SED[:,1] #for consistency with other tables
-                y = np.log10(x*y) #lambdaF_lambda
-                x = np.log10(x)
+                sed = pd.read_csv(fname, header = None, sep='\s+').to_numpy()
+                x, y = sed[:,0], sed[:,1]*sed[:,0] # lambda*F_lambda
             except FileNotFoundError:
                 print(f"{which_type} not found, available SEDs from Polletta are:")
                 available_sed = [i for i in os.listdir(path) if i.endswith(".sed")]
@@ -513,36 +489,26 @@ def get_sed(which_sed='krawczyk', which_type='All', normalization=False, log_log
                 raise Exception 
     
     elif "berk" in which_sed.lower():
-        SED = pd.read_csv(os.path.join(path,'vanden_berk_composite.dat') , sep='\s+', header=0)
-        x = SED["lambda"].to_numpy()
-        y = np.log10(x*SED["f_lambda"].to_numpy())
-        x = np.log10(x)     
-        
+        sed = pd.read_csv(os.path.join(path,'vandenberk_01.dat') , sep='\s+', header=0)
+        x = sed["lambda"].to_numpy(), 
+        y = x*sed["f_lambda"].to_numpy()    
+
+    elif "caballero" in which_sed.lower():
+        sed = pd.read_csv(os.path.join(path,'hernan_caballero_17.dat') , sep=' ', header=0, comment = '#')
+        sed_types = [i for  i in sed.columns[1:] if "sigma" not in i]
+        if which_type.casefold()  not in sed_types:
+            raise Exception(f"which_type must be one of {sed_types}")
+        x, y = sed["lambda"].to_numpy(), sed[which_type.casefold()].to_numpy()
     else:
-        raise Exception("Which_sed can be 'wissh', 'krawczyk', 'richards' 'polletta', 'vandenberk'")
+        raise Exception("Which_sed can be 'wissh', 'krawczyk', 'richards' 'polletta', 'vandenberk', 'caballero'")
 
-    
-    
-    if normalization and log_log:
-        normalization = [10**k for k in normalization]
-        x = 10**x
-        y = 10**y
-        norm = normalization[1]/interpolate(x, y, normalization[0])
+    if normalization:
+        norm = normalization[1]/np.interp(normalization[0], x, y)
         y = y*norm
-        x = np.log10(x)
-        y = np.log10(y)
-    elif normalization and not log_log:
-        x = 10**x
-        y = 10**y
-        norm = normalization[1]/interpolate(x, y, normalization[0])
-        y = y*norm
-    elif not log_log:
-        x = 10**x
-        y = 10**y
-    x = np.reshape(x, (x.shape[0], 1))
-    y = np.reshape(y, (y.shape[0], 1))
-    sed = np.concatenate((x, y), axis=1)
+    if log_log:
+        x, y = np.log10(x), np.log10(y)
 
+    sed = np.vstack([x,y]).T
     return sed
 
 
