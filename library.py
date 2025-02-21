@@ -44,10 +44,6 @@ PATH_TO_DATA =  "my_functions"
 
 
 
-
-
-
-
 def interpolate(x, y, x0, out_of_bounds='error', sort=True, log_log=True):
     """
     It returns the value of y computed at x0 linearly interpolating between 
@@ -233,9 +229,9 @@ def three_2_two(data, *args, band_names = None, all_names = None ):
         name_array = all_names
     
     
-    elif band_names and Ndata ==3:
+    elif band_names and Ndata == 3:
        name_array =[]
-       for I, name in enumerate(band_names):
+       for i, name in enumerate(band_names):
            if i <  Nbands:
                name_array.append('lambda_'+name)
                name_array.append(name)
@@ -245,7 +241,7 @@ def three_2_two(data, *args, band_names = None, all_names = None ):
 
     elif band_names and Ndata ==2:
        name_array =[]
-       for I, name in enumerate(band_names):
+       for i, name in enumerate(band_names):
            if i <  Nbands:
                name_array.append(name)
                name_array.append('err_'+name)
@@ -278,86 +274,95 @@ def compute_mean_in_bins(x, y, bins, function = 'mean'):
 
 ############# Astro
 
-def get_luminosity(magnitudes, redshift, H0=70, Om0 =0.3, Return_Fluxes = False):         
+def get_flux(magnitudes):
 
-    luminosity = np.zeros(magnitudes.shape)
+    fluxes = np.zeros(magnitudes.shape)
     
-    if len(magnitudes.shape) == 2:
-        for i in range(magnitudes.shape[0]):
-            luminosity[i, 1] = 10**(-0.4*(magnitudes[i,1] +48.6))*(2.998e18/magnitudes[i,0]) #magntitudes to fluxes
-            luminosity[i, 2] = luminosity[i,1] * magnitudes[i, 2]*0.4*np.log(10)   #error on fluxes
-            luminosity[i, 0] = magnitudes[i,0]/(redshift+1)       #rest frame wavelengths
-        if not Return_Fluxes:
-            dl = FlatLambdaCDM(H0=H0, Om0=Om0).luminosity_distance(redshift).to(units.cm).value 
-            for i in range(magnitudes.shape[0]):
-                luminosity[i, 1] = luminosity[i, 1]*dl*dl*4*np.pi 
-                luminosity[i, 2] = luminosity[i, 2]*dl*dl*4*np.pi
-     
+    if len(fluxes.shape) == 2:
+        fluxes[:, 1] = 10**(-0.4*(magnitudes[:,1] +48.6))*(2.998e18/magnitudes[:,0]) #magntitudes to fluxes
+        fluxes[:, 2] = fluxes[:,1] * magnitudes[:, 2]*0.4*np.log(10)   #error on fluxes
+        fluxes[:, 0] = magnitudes[:,0]       #observed frame wavelengths
+    
     elif len(magnitudes.shape) == 3:    
         for i in range(magnitudes.shape[1]):
-            luminosity[:, i, 1] = 10**(-0.4*(magnitudes[:,i,1] +48.6))*(2.998e18/magnitudes[:,i,0]) #magntitudes to fluxes
-            luminosity[:, i, 2] = luminosity[:,i,1] * magnitudes[:, i, 2]*0.4*np.log(10)   #error on fluxes
-            luminosity[:, i, 0] = magnitudes[:,i,0]/(redshift+1)       #rest frame wavelengths
-        if not Return_Fluxes:
-            dl = FlatLambdaCDM(H0=H0, Om0=Om0).luminosity_distance(redshift).to(units.cm).value 
-            for i in range(magnitudes.shape[1]):
-                 luminosity[:, i, 1] = luminosity[:, i, 1]*dl*dl*4*np.pi 
-                 luminosity[:, i, 2] = luminosity[:, i, 2]*dl*dl*4*np.pi
-    
+            fluxes[:, i, 1] = 10**(-0.4*(magnitudes[:,i,1] + 48.6))*(2.998e18/magnitudes[:,i,0]) #magntitudes to fluxes
+            fluxes[:, i, 2] = fluxes[:,i,1] * magnitudes[:, i, 2]*0.4*np.log(10)   #error on fluxes
+            fluxes[:, i, 0] = magnitudes[:,i,0]      #observed frame wavelengths
     else:
         raise Exception('wrong format for magnitudes')
     
+    return fluxes       
+
+
+def get_luminosity(magnitudes, redshift, H0 = 70, Om0 = 0.3):         
+
+    luminosity = get_flux(magnitudes)
+    
+    if len(magnitudes.shape) == 2:
+        dl = FlatLambdaCDM(H0=H0, Om0=Om0).luminosity_distance(redshift).to(units.cm).value 
+        luminosity[:,0] = luminosity[:,0]/(redshift+1) #rest frame wavelengths
+        luminosity[:, 1:] = luminosity[i, 1:]*(dl*dl*4*np.pi).reshape(-1,1) 
+
+    else: 
+        dl = FlatLambdaCDM(H0=H0, Om0=Om0).luminosity_distance(redshift).to(units.cm).value    
+        for i in range(magnitudes.shape[1]):
+            luminosity[:, i, 0] = luminosity[:,i,0]/(redshift+1)       #rest frame wavelengths
+            luminosity[:, i, 1:] = luminosity[:, i, 1:]*(dl*dl*4*np.pi).reshape(-1,1)
     return luminosity         
 
-def get_magnitudes(luminosity, redshift, return_wavelengths = True, H0 =70, Om0 = 0.3):
+
+def get_magnitudes(luminosity, redshift, H0 =70, Om0 = 0.3):
     magnitudes = np.zeros(luminosity.shape)
     
-    #if len(magnitudes.shape) == 2:
+    if len(magnitudes.shape) == 2:
+        dl = FlatLambdaCDM(H0=H0, Om0=Om0).luminosity_distance(redshift).cgs.value 
         
-        #for i in range(magnitudes.shape[0]):
-            #luminosity[i, 1] = 10**(-0.4*(magnitudes[i,1] +48.6))*(2.998e18/magnitudes[i,0]) #magntitudes to fluxes
-            #luminosity[i, 2] = luminosity[i,1] * magnitudes[i, 2]*0.4*np.log(10)   #error on fluxes
-            #luminosity[i, 0] = magnitudes[i,0]/(redshift+1)       #rest frame wavelengths
-        #if not Return_Fluxes:
-            #dl = FlatLambdaCDM(H0=H0, Om0=Om0).luminosity_distance(redshift).to(units.cm).value 
-            #for i in range(magnitudes.shape[0]):
-                #luminosity[i, 1] = luminosity[i, 1]*dl*dl*4*np.pi 
-                #luminosity[i, 2] = luminosity[i, 2]*dl*dl*4*np.pi
+        magnitudes[:,0] = luminosity[:,0]*(redshift+1)
+        magnitudes[:,1:] = luminosity[:,1:]/(dl*dl*4*np.pi)
+       
+        magnitudes[:,1:] = magnitudes[:,1:]*magnitudes[:,0].reshape(-1,1)/2.998e18  #Fnu
+
+        magnitudes[:,2] = 2.5*(magnitudes[:,2]/magnitudes[:,1])/np.log(10)
+        magnitudes[:,1] = -2.5*np.log10( magnitudes[:,1]) -48.6
+
      
     if len(magnitudes.shape) == 3:    
         dl = FlatLambdaCDM(H0=H0, Om0=Om0).luminosity_distance(redshift).cgs.value 
         for i in range(magnitudes.shape[1]):
             magnitudes[:, i, 0] = luminosity[:, i, 0]*(redshift+1)
-            magnitudes[:, i, 1] = luminosity[:, i, 1]/(dl*dl*4*np.pi)
-            magnitudes[:, i, 2] = luminosity[:, i, 2]/(dl*dl*4*np.pi)
-            
-            magnitudes[:, i, 1] = magnitudes[:, i, 1]*magnitudes[:, i, 0]/2.998e18  #Fnu
-            magnitudes[:, i, 2] = magnitudes[:, i, 2]*magnitudes[:, i, 0]/2.998e18    
-            
+            magnitudes[:, i, 1:] = luminosity[:, i, 1:]/(dl*dl*4*np.pi).reshape(-1,1)
+        
+            magnitudes[:, i, 1:] = magnitudes[:, i, 1:]*magnitudes[:, i, 0].reshape(-1,1)/2.998e18  #Fnu
+             
             magnitudes[:, i, 2] = 2.5*(magnitudes[:, i, 2]/magnitudes[:, i, 1])/np.log(10)
             magnitudes[:, i, 1] = -2.5*np.log10( magnitudes[:, i, 1]) -48.6
      
-    if return_wavelengths:
-        return magnitudes
-    else:
-        return magnitudes[:,:, 1:]
+    return magnitudes
 
 
 def monochromatic_lum(data, wavelength, uncertainties = False, out_of_bounds = np.nan):
     
-    N = np.shape(data)[0]   #Number of QSOs
-    if not uncertainties:
-       lum = np.zeros((N,))
-       for i in range(0,N):
-           lum[i]= interpolate(data[i,:,0],data[i,:,1], wavelength, out_of_bounds=out_of_bounds)
-    else:
-       lum = np.zeros((N,3)) 
-       for i in range(0,N):
-           lum[i,0]= interpolate(data[i,:,0],data[i,:,1], wavelength, out_of_bounds=out_of_bounds)
-           lum[i,1]= interpolate(data[i,:,0],data[i,:,1]-data[i,:,2], wavelength, out_of_bounds=out_of_bounds)
-           lum[i,2]= interpolate(data[i,:,0],data[i,:,1]+data[i,:,2], wavelength, out_of_bounds=out_of_bounds)
-    lum =lum.astype('float')
+    if len(data.shape) == 2: # single object
+        lum= interpolate(data[:,0],data[:,1], wavelength, out_of_bounds=out_of_bounds)
+        if uncertainties: 
+            lum_low = interpolate(data[:,0],data[:,1] - data[:,2], wavelength, out_of_bounds=out_of_bounds)
+            lum_up = interpolate(data[:,0], data[:,1] + data[:,2], wavelength, out_of_bounds=out_of_bounds)
+            lum = np.hstack(lum, lum_low, lum_up)
+    
+    elif len(data.shape) == 3:
+        lum = np.array([interpolate(d[:,0],d[:,1], wavelength, out_of_bounds=out_of_bounds) for d in data])
+        if uncertainties: 
+            lum_low = np.array([interpolate(d[:,0],d[:,1]-d[:,2], wavelength, out_of_bounds=out_of_bounds) for d in data])
+            lum_up = np.array([interpolate(d[:,0],d[:,1]+d[:,2], wavelength, out_of_bounds=out_of_bounds) for d in data])
+            lum = np.vstack([lum, lum_low, lum_up]).T
     return lum  
+
+def add_wavelength(magnitudes, wavelen):
+    assert(len(wavelen)== magnitudes.shape[1])
+    new_magnitudes = np.zeros((magnitudes.shape[0],magnitudes.shape[1], 3))
+    new_magnitudes[:,:,0] = wavelen
+    new_magnitudes[:,:,1:]=magnitudes
+    return new_magnitudes
 
 
 def merge_bands(df, column_name):
