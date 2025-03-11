@@ -63,9 +63,9 @@ Subaru_Suprime.V   5448.15
 Subaru_Suprime.r   6230.91
 Subaru_Suprime.i   7629.33
 Subaru_Suprime.z   9017.60
-Swift_UVOT.UVW2    2083.95
+Swift_UVOT.UVVV2    2083.95
 Swift_UVOT.UVM2    2245.03
-Swift_UVOT.UVW1    2681.67
+Swift_UVOT.UVVV1    2681.67
 Swift_UVOT.U       3520.88
 Swift_UVOT.B       4345.28
 Swift_UVOT.V       5411.45
