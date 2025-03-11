@@ -1,0 +1,9 @@
+setup.py
+my_functions/__init__.py
+my_functions/corrections.py
+my_functions/interpolation_processes.py
+my_functions/library.py
+my_library.egg-info/PKG-INFO
+my_library.egg-info/SOURCES.txt
+my_library.egg-info/dependency_links.txt
+my_library.egg-info/top_level.txt
