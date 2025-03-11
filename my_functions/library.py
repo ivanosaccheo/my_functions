@@ -40,7 +40,9 @@ import pytz
 
 
 
-PATH_TO_DATA =  "my_functions"
+PATH_TO_DATA =  os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+#"my_functions"
 
 
 

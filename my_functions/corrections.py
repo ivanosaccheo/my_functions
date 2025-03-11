@@ -8,8 +8,7 @@ from scipy.interpolate import interp1d
 from scipy import stats
 
 
-PATH_TO_DATA =  "my_functions"
-
+PATH_TO_DATA =  os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def lyman_continuum_LAF(redshift, lambda_obs):
     
