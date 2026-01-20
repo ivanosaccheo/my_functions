@@ -1,4 +1,5 @@
 # Python build artifacts
+build 
 build/
 dist/
 *.egg-info/
@@ -8,5 +9,6 @@ dist/
 # Byte-compiled / cache
 __pycache__/
 *.pyc
+
 
 .DS_Store
