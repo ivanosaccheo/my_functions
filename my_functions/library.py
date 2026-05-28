@@ -267,6 +267,167 @@ def get_binned_quantiles(x, y,
                                include_counts=include_counts)
 
 
+def density_plot_kde(x, 
+                 y,
+                 levels=(0.68, 0.90),
+                 gridsize=200,
+                 n_grid_x = None,
+                 n_grid_y = None,
+                 ax=None,
+                 fill_levels = False,
+                 ymin = None,
+                 ymax  = None,
+                 xmin = None, 
+                 xmax = None,
+                 **kwargs):
+    from scipy.stats import gaussian_kde
+    x = np.asarray(x)
+    y = np.asarray(y)
+    mask = np.isfinite(x) & np.isfinite(y)
+    x = x[mask]
+    y = y[mask]
+    
+    if ax is None:
+        fig, ax = plt.subplots()
+    
+    levels = np.asarray(levels)
+    
+    values = np.vstack([x, y])
+    kde = gaussian_kde(values)
+    n_grid_x = n_grid_x or gridsize
+    n_grid_y = n_grid_y or gridsize
+
+    if xmin is None:
+        xmin = x.min()
+    if xmax is None:
+        xmax = x.max()
+    if ymin is None:
+        ymin = y.min()
+    if ymax is None:
+        ymax = y.max()
+    xx, yy = np.meshgrid(
+        np.linspace(xmin, xmax, n_grid_x),
+        np.linspace(ymin, ymax, n_grid_y),)
+    grid_values = np.vstack([xx.ravel(), yy.ravel()])
+    zz = kde(grid_values).reshape(xx.shape)
+    z_sorted = np.sort(zz.ravel())[::-1]
+    z_cumsum = np.cumsum(z_sorted)
+    z_cumsum /= z_cumsum[-1]
+    density_levels = []
+    for level in levels:
+        idx = np.searchsorted(z_cumsum, level)
+        density_levels.append(z_sorted[idx])
+
+    density_levels = np.sort(density_levels)
+
+    if fill_levels:
+        filled_levels = np.r_[density_levels, zz.max()]
+        print(filled_levels)
+        ax.contourf(
+                xx,
+                yy,
+                zz,
+                levels=filled_levels,
+                **kwargs,
+        )
+    else:
+        ax.contour(xx,
+                   yy,
+                   zz,
+                   levels=density_levels,
+                   **kwargs,)
+
+    return ax
+
+
+def density_plot(x,
+                y,
+                levels=(0.68, 0.90),
+                gridsize=200,
+                n_grid_x=None,
+                n_grid_y=None,
+                ax=None,
+                ymin=None,
+                ymax=None,
+                xmin=None,
+                xmax=None,
+                smoothing=1.5,
+                fill_levels = False,
+                **kwargs):
+    from scipy.ndimage import gaussian_filter
+    x = np.asarray(x)
+    y = np.asarray(y)
+
+    mask = np.isfinite(x) & np.isfinite(y)
+    x = x[mask]
+    y = y[mask]
+
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    levels = np.asarray(levels)
+
+    n_grid_x = n_grid_x or gridsize
+    n_grid_y = n_grid_y or gridsize
+
+    if xmin is None:
+        xmin = x.min()
+    if xmax is None:
+        xmax = x.max()
+    if ymin is None:
+        ymin = y.min()
+    if ymax is None:
+        ymax = y.max()
+    H, xedges, yedges = np.histogram2d(
+        x,
+        y,
+        bins=(n_grid_x, n_grid_y),
+        range=((xmin, xmax), (ymin, ymax)),
+    )
+    H = gaussian_filter(H, sigma=smoothing)
+    zz = H.T
+
+    xcenters = 0.5 * (xedges[:-1] + xedges[1:])
+    ycenters = 0.5 * (yedges[:-1] + yedges[1:])
+    xx, yy = np.meshgrid(xcenters, ycenters)
+
+    # Convert requested enclosed fractions into density thresholds
+    z_sorted = np.sort(zz.ravel())[::-1]
+    z_sorted = z_sorted[z_sorted > 0]
+
+    z_cumsum = np.cumsum(z_sorted)
+    z_cumsum /= z_cumsum[-1]
+
+    density_levels = []
+    for level in levels:
+        idx = np.searchsorted(z_cumsum, level)
+        idx = min(idx, len(z_sorted) - 1)
+        density_levels.append(z_sorted[idx])
+
+    density_levels = np.sort(density_levels)
+    
+    if fill_levels:
+        filled_levels = np.r_[density_levels, zz.max()]
+        print(filled_levels)
+        ax.contourf(
+                xx,
+                yy,
+                zz,
+                levels=filled_levels,
+                **kwargs,
+        )
+
+
+    else:
+        ax.contour(
+                xx,
+                yy,
+                zz,
+                levels=density_levels,
+                **kwargs,
+    )
+    return ax
+
 
 
 
