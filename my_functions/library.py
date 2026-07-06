@@ -16,8 +16,6 @@ import os
 PATH_TO_DATA =  os.path.expanduser("~/WORK/my_functions/")
 
 
-
-
 def interpolate(x, y, x0, out_of_bounds = "extrapolate", sort= False, log_log=True):
     """
     Just calls intep1d, kept for legacy
