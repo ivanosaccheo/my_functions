@@ -11,6 +11,37 @@ from my_functions import library as lb
 
 PATH_TO_DATA = lb.PATH_TO_DATA 
 
+
+def flux_to_mag(flux, units="microJy"):
+    assert units.lower() in ["microjy", "cgs", "erg"]
+    if units.lower() == "microjy":
+        return -2.5 * np.log10(flux) + 23.9
+    else:
+        return -2.5 * np.log10(flux) - 48.6
+        
+def fluxes_to_color(flux1, flux2):
+    return -2.5 * np.log10(flux1/flux2)
+
+def get_SNR(err_mag):
+    return (2.5/np.log(10))/err_mag
+
+def err_flux_to_err_mag(err_flux, flux):
+    return  ((2.5/np.log(10))/flux)*err_flux
+
+def mag_to_flux(mag, units = 'microJy'):
+    assert units.lower() in ["microjy", "cgs", "erg"]
+    if units.lower() == "microjy":
+        zp = 23.9
+    else:
+        zp = -48.6
+    f = (mag - zp)/2.5
+    return 10**(-f)
+
+def err_mag_to_err_flux(err_mag, mag):
+    f = mag_to_flux(mag)
+    err_flux = ((np.log(10)/2.5)*f)*err_mag
+    return err_flux
+
 def get_flux(magnitudes):
 
     magnitudes = np.asarray(magnitudes)
@@ -26,7 +57,7 @@ def get_flux(magnitudes):
     mag = magnitudes[..., 1]
     err = magnitudes[..., 2]
 
-    flux = 10**(-0.4*(mag +48.6))*(2.998e18/wavlen)
+    flux = 10**(-0.4*(mag + 48.6))*(2.998e18/wavlen)
     err_flux = flux * err * 0.4*np.log(10)
     
     fluxes[..., 0] = wavlen
@@ -121,12 +152,15 @@ def get_monochromatic_lum(data, wavelength, uncertainties = False,  out_of_bound
 
 class filtro():
     
-    def __init__(self, filter_name, path = 'tables/filters'):
-        self.path = os.path.join(PATH_TO_DATA,path)
+    def __init__(self, filter_name, initialize =  True, path = 'tables/filters'):
+        self.path = os.path.join(PATH_TO_DATA, path)
         self.get_filter_name(filter_name)
         if hasattr(self, 'name'):
             self.wav = self.get_effective_wavelength()
         
+        if initialize:
+            self.get_transmission()
+
         return None 
         
     def get_filter_name(self, filter_name):
@@ -258,12 +292,6 @@ def get_sed(which_sed='krawczyk', which_type='All', normalization=False, log_log
 
     sed = np.vstack([x,y]).T
     return sed
-
-def get_host():
-     path = os.path.join(PATH_TO_DATA, path)
-     return pd.read_csv(path, header = 0, sep = ',' ).to_numpy()
-
-
 
 def lusso_recipe(lambda_start, L_start, L_1kev, Npoints = 30):
     """
@@ -404,7 +432,6 @@ def get_quasar_lines(maxrows = 25, flux_sorted = True, remove_iron = True,
     qso_lines.get_plot_ID()
     return qso_lines.table
 
-
 def sersic_get_bn(n):
     return 2*n - 1./3 + (4./405)*(n**(-1)) + (46./25515)*(n**(-2)) + (131./1148175)*(n**(-3)) - (2194697./30690717750)*(n**(-4))
 
@@ -477,3 +504,44 @@ def add_filter_from_IVOA(filter_id, overwrite = False):
     wav_eff_table.to_csv(os.path.join(filepath, "filter_list.txt"), sep = " ")
     transmission.to_csv(os.path.join(filepath, f"{filter_name}.dat"), sep =" ", index = False, header = False)
 
+
+def get_lephare_sed(sed_name, kind="GAL", lib="COSMOS_SED"):
+
+    path = os.path.join(PATH_TO_DATA,"tables","sed_templates","lephare")
+
+    available_kinds = [
+        fname for fname in os.listdir(path)
+        if os.path.isdir(os.path.join(path, fname))]
+
+    if kind not in available_kinds:
+        print(f"{kind} not found. Available kinds are:")
+        for k in available_kinds:
+            print(k)
+        raise KeyError(kind)
+
+    subpath = os.path.join(path, kind)
+
+    available_libs = [
+        fname for fname in os.listdir(subpath)
+        if os.path.isdir(os.path.join(subpath, fname))]
+
+    if lib not in available_libs:
+        print(f"{lib} not found. Available libs are:")
+        for l in available_libs:
+            print(l)
+        raise KeyError(lib)
+
+    subpath = os.path.join(subpath, lib)
+
+    available_seds = [
+        fname for fname in os.listdir(subpath)
+        if fname.endswith(".sed") ]
+
+    if sed_name not in available_seds:
+        print(f"{sed_name} not found. Available SEDs are:")
+        for s in available_seds:
+            print(s)
+        raise KeyError(sed_name)
+
+    final_path =  os.path.join(subpath, sed_name)
+    return np.genfromtxt(final_path)
