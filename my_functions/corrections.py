@@ -191,62 +191,193 @@ def charlot_2000(wavlen, ism_fraction = 0.6):
 
 class reddening_law:
 
-    def __init__(self, ebv = 0, Av = None, law = "calzetti", Rv = "default",
-                 ism_fraction = 0.5):
-        self.ebv = ebv
-        self.Av = Av
+    def __init__(
+        self,
+        ebv=0,
+        Av=None,
+        law="calzetti",
+        Rv="default",
+        ism_fraction=0.5,):
+
         self.law = law.casefold()
-        if Rv == "default":
-            Rv_dict = {"calzetti" : 4.05, "prevot" : 2.72, "charlot" : 3.1}
-            self.Rv = Rv_dict[self.law]
-        else: 
-            self.Rv = Rv
-        if self.Av is None: self.update_Av()
-        else: self.update_ebv()
         self.ism_fraction = ism_fraction
-        return None
-    
+
+        if Rv == "default":
+            Rv_dict = {"calzetti": 4.05,"prevot": 2.72,"charlot": 3.1,}
+            if self.law not in Rv_dict:
+                raise ValueError("law must be 'calzetti', 'prevot' or 'charlot'")
+            self.Rv = Rv_dict[self.law]
+        else:
+            self.Rv = Rv
+
+        self._wavlen = None
+
+        if Av is None:
+            self._ebv = ebv
+            self._Av = ebv * self.Rv
+
+        else:
+            self._Av = Av
+            self._ebv = Av / self.Rv
+
+    def _clear_wavelength_cache(self):
+
+        for attr in (
+            "_k_lambda",
+            "_A_lambda",
+            "_tau_lambda",
+            "_extinction",):
+
+            if hasattr(self, attr):
+                delattr(self, attr)
+
+    def _clear_reddening_cache(self):
+
+        # k_lambda does NOT depend on ebv
+        for attr in (
+            "_A_lambda",
+            "_tau_lambda",
+            "_extinction",
+        ):
+            if hasattr(self, attr):
+                delattr(self, attr)
+
+    def _set_wavlen(self, wavlen):
+
+        wavlen = np.asarray(wavlen)
+
+        if (self._wavlen is None
+            or not np.array_equal(wavlen, self._wavlen)):
+            
+            self._wavlen = wavlen.copy()
+            self._clear_wavelength_cache()
+
+        return self._wavlen
+
+    @property
+    def ebv(self):
+        return self._ebv
+
+    @ebv.setter
+    def ebv(self, value):
+
+        self._ebv = value
+        self._Av = value * self.Rv
+
+        self._clear_reddening_cache()
+
+    @property
+    def Av(self):
+        return self._Av
+
+    @Av.setter
+    def Av(self, value):
+
+        self._Av = value
+        self._ebv = value / self.Rv
+
+        self._clear_reddening_cache()
+
+    @property
+    def wavlen(self):
+
+        if self._wavlen is None:
+            raise AttributeError("No wavelength has been evaluated yet.")
+
+        return self._wavlen
+
     def get_k_lambda(self, wavlen):
-        if "calzetti" in self.law:
-            self.k_lambda = calzetti_2000(wavlen, Rv = self.Rv)
-        elif "prevot" in self.law:
-            self.k_lambda = prevot_1984(wavlen)
-        elif "charlot" in self.law:
-            self.k_lambda = charlot_2000(wavlen, ism_fraction=self.ism_fraction)
-        else: 
-            raise Exception("law must be 'calzetti', 'prevot' or 'charlot'")
-        return None
-    
-    def get_tau_lambda(self, wavlen, control_negative = True):
-        if not hasattr(self, "k_lambda"):
-            self.get_k_lambda(wavlen)
-        self.tau_lambda = (self.k_lambda*self.ebv)/1.086
-        if control_negative:
-             self.tau_lambda[self.tau_lambda<0] =0
-        return None 
-    
-    def get_A_lambda(self, wavlen, control_negative = True):
-        if not hasattr(self, "k_lambda"):
-            self.get_k_lambda(wavlen)
-        self.A_lambda = (self.k_lambda*self.ebv)
-        if control_negative:
-             self.A_lambda[self.A_lambda<0] =0
-        return None
+
+        wavlen = self._set_wavlen(wavlen)
+
+        if hasattr(self, "_k_lambda"):
+            return self._k_lambda
+
+        if self.law == "calzetti":
+           self._k_lambda = calzetti_2000(wavlen, Rv=self.Rv,)
         
+        elif self.law == "prevot":
+            self._k_lambda = prevot_1984(wavlen)
+        
+        elif self.law == "charlot":
+            self._k_lambda = charlot_2000(wavlen,ism_fraction=self.ism_fraction,)
+
+        else:
+            raise ValueError("law must be 'calzetti', 'prevot' or 'charlot'")
+
+        return self._k_lambda
+
+    @property
+    def k_lambda(self):
+
+        if not hasattr(self, "_k_lambda"):
+            raise AttributeError("k_lambda has not been computed yet.")
+        return self._k_lambda
+
+
+    def get_A_lambda(self,wavlen,control_negative=True):
+
+        self._set_wavlen(wavlen)
+        if hasattr(self, "_A_lambda"):
+            return self._A_lambda
+        
+        k_lambda = self.get_k_lambda(wavlen)
+
+        self._A_lambda = k_lambda * self.ebv
+
+        if control_negative:
+            self._A_lambda = np.maximum(self._A_lambda,0,)
+
+        return self._A_lambda
+
+    @property
+    def A_lambda(self):
+
+        if not hasattr(self, "_A_lambda"):
+            raise AttributeError("A_lambda has not been computed yet.")
+
+        return self._A_lambda
+
+    def get_tau_lambda(self,wavlen,control_negative=True,):
+
+        self._set_wavlen(wavlen)
+
+        if hasattr(self, "_tau_lambda"):
+            return self._tau_lambda
+
+        A_lambda = self.get_A_lambda(wavlen, control_negative=control_negative)
+        self._tau_lambda = A_lambda / 1.086
+
+        return self._tau_lambda
+
+    @property
+    def tau_lambda(self):
+
+        if not hasattr(self, "_tau_lambda"):
+            raise AttributeError("tau_lambda has not been computed yet.")
+        return self._tau_lambda
+
     def get_extinction(self, wavlen):
-        if not hasattr(self, "k_lambda"):
-            self.get_k_lambda(wavlen)
-        self.get_tau_lambda(wavlen)
-        self.extinction = np.exp(-self.tau_lambda)
-        return None
+
+        self._set_wavlen(wavlen)
+
+        if hasattr(self, "_extinction"):
+            return self._extinction
+
+        tau_lambda = self.get_tau_lambda(wavlen)
+
+        self._extinction = np.exp(-tau_lambda)
+
+        return self._extinction
+
+    @property
+    def extinction(self):
+
+        if not hasattr(self, "_extinction"):
+            raise AttributeError("Extinction has not been computed yet.")
+        
+        return self._extinction
     
-    def update_ebv(self):
-        self.ebv = self.Av/self.Rv
-        return None
-    
-    def update_Av(self):
-        self.Av = self.ebv*self.Rv
-        return None
 
 def get_line_normalization_vandenberk(obs_wav, wav_min, wav_max, equivalent_width, stddev):
     ### Only used in get_lines_vandenberk
