@@ -189,6 +189,16 @@ def charlot_2000(wavlen, ism_fraction = 0.6):
     
     return norma*k_lambda
 
+def gordon_2023(wavlen, Rv = 3.1):
+    from astropy import units as u
+    try:
+        from dust_extinction.parameter_averages import G23
+    except ModuleNotFoundError as e:
+        raise ModuleNotFoundError("Gordon 2023 requires the 'dust_extinction' package") from e
+    ext = G23(Rv = Rv)
+    k_lambda = Rv * ext(np.asarray(wavlen) * u.AA )
+    return k_lambda
+
 class reddening_law:
 
     def __init__(
@@ -203,7 +213,7 @@ class reddening_law:
         self.ism_fraction = ism_fraction
 
         if Rv == "default":
-            Rv_dict = {"calzetti": 4.05,"prevot": 2.72,"charlot": 3.1,}
+            Rv_dict = {"calzetti": 4.05, "prevot": 2.72, "charlot": 3.1, "gordon" : 3.1}
             if self.law not in Rv_dict:
                 raise ValueError("law must be 'calzetti', 'prevot' or 'charlot'")
             self.Rv = Rv_dict[self.law]
@@ -301,9 +311,12 @@ class reddening_law:
         
         elif self.law == "charlot":
             self._k_lambda = charlot_2000(wavlen,ism_fraction=self.ism_fraction,)
+        
+        elif self.law == "gordon":
+            self._k_lambda = gordon_2023(wavlen, Rv=self.Rv,)
 
         else:
-            raise ValueError("law must be 'calzetti', 'prevot' or 'charlot'")
+            raise ValueError("law must be 'calzetti', 'prevot', 'charlot' or 'gordon'")
 
         return self._k_lambda
 
